@@ -66,24 +66,42 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang libc++-dev libc++abi-dev lcov
+        sudo apt-get install -y clang llvm libc++-dev libc++abi-dev
     
     - name: Configure with Coverage
       run: |
         chmod +x scripts/*.sh
-        ./scripts/configure.sh --coverage
+        # Use Clang with source-based coverage (not gcov)
+        cmake -S . -B build \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_FLAGS="-stdlib=libc++ -fPIC -fprofile-instr-generate -fcoverage-mapping" \
+          -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -lc++abi -fprofile-instr-generate" \
+          -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -lc++abi -fprofile-instr-generate" \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DENABLE_TESTING=ON \
+          -DENABLE_FUZZING=OFF \
+          -DENABLE_BENCHMARKS=OFF \
+          -DENABLE_COVERAGE=OFF \
+          -DENABLE_SANITIZERS=OFF
     
     - name: Build
-      run: ./scripts/build.sh
+      run: cmake --build build --parallel $(nproc)
     
     - name: Test
-      run: ./scripts/test.sh
-    
-    - name: Generate Coverage
       run: |
         cd build
-        lcov --capture --directory . --output-file coverage.info
-        lcov --remove coverage.info '/usr/*' '*/test/*' '_deps/*' --output-file coverage.info
+        LLVM_PROFILE_FILE="wshell-%p.profraw" ctest --output-on-failure --verbose
+    
+    - name: Generate Coverage with llvm-cov
+      run: |
+        cd build
+        llvm-profdata merge -sparse *.profraw -o wshell.profdata
+        llvm-cov export ./test/wshell_tests \
+          -instr-profile=wshell.profdata \
+          -format=lcov \
+          -ignore-filename-regex='.*/(test|_deps)/.*' \
+          > coverage.info
     
     - name: Upload to Codecov
       uses: codecov/codecov-action@v5
