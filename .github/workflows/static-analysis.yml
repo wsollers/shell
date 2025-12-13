@@ -157,22 +157,6 @@ jobs:
         sarif_file: ${{ steps.msdo.outputs.sarifFile }}
       continue-on-error: true
 
-  ossar:
-    name: OSSAR Security Scan
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Run OSSAR
-      uses: github/ossar-action@v1
-      id: ossar
-    
-    - name: Upload OSSAR results
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: ${{ steps.ossar.outputs.sarifFile }}
-      continue-on-error: true
-
   osv-scanner:
     name: OSV Scanner
     runs-on: ubuntu-latest
