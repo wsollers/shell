@@ -20,7 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ---------- Dependencies ----------
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -31,7 +30,6 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install llvm
 
-      # ---------- Configure ----------
       - name: Configure (Unix)
         if: runner.os != 'Windows'
         run: |
@@ -42,7 +40,6 @@ jobs:
         if: runner.os == 'Windows'
         run: .\scripts\configure.ps1 -${{ matrix.build_type }}
 
-      # ---------- Build ----------
       - name: Build (Unix)
         if: runner.os != 'Windows'
         run: ./scripts/build.sh
@@ -51,7 +48,6 @@ jobs:
         if: runner.os == 'Windows'
         run: .\scripts\build.ps1
 
-      # ---------- Test ----------
       - name: Test (Unix)
         if: runner.os != 'Windows'
         run: ./scripts/test.sh
@@ -68,27 +64,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ---------- Dependencies ----------
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y clang llvm libc++-dev libc++abi-dev
 
-      # ---------- Configure with coverage ----------
       - name: Configure (coverage)
         run: |
           chmod +x scripts/*.sh
           ./scripts/configure.sh --coverage --build-dir build
 
-      # ---------- Build ----------
       - name: Build
         run: ./scripts/build.sh --build-dir build
 
-      # ---------- Generate coverage ----------
-      - name: Generate coverage (llvm-profdata + llvm-cov)
-        run: ./scripts/coverage.sh --build-dir build
+      # Explicit test step for coverage generation
+      - name: Test (generate .profraw)
+        run: |
+          set -euxo pipefail
+          cd build
+          mkdir -p coverage
+          # Use an ABSOLUTE path so profraw always lands in build/coverage/
+          LLVM_PROFILE_FILE="$PWD/coverage/wshell-%p-%m.profraw" \
+            ctest --output-on-failure --verbose
 
-      # ---------- Upload ----------
+          ls -la coverage || true
+          ls -la coverage/*.profraw
+
+      - name: Generate coverage (llvm-profdata + llvm-cov)
+        run: |
+          set -euxo pipefail
+          cd build
+
+          llvm-profdata merge -sparse coverage/*.profraw -o coverage/wshell.profdata
+
+          # Export LCOV from the test binary; also include the shared lib object if present
+          TEST_BIN="$(find . -type f -name wshell_tests -perm -111 | head -n 1)"
+          LIB_OBJ="$(find . -type f \( -name 'libwshell*.so' -o -name 'libwshell*.dylib' \) | head -n 1 || true)"
+
+          if [[ -n "${LIB_OBJ}" ]]; then
+            llvm-cov export "${TEST_BIN}" \
+              -object "${LIB_OBJ}" \
+              -instr-profile=coverage/wshell.profdata \
+              -format=lcov \
+              -ignore-filename-regex='.*/(test|_deps)/.*' \
+              > coverage.info
+          else
+            llvm-cov export "${TEST_BIN}" \
+              -instr-profile=coverage/wshell.profdata \
+              -format=lcov \
+              -ignore-filename-regex='.*/(test|_deps)/.*' \
+              > coverage.info
+          fi
+
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
