@@ -18,10 +18,9 @@ Options:
 
 Notes:
 - This script generates LLVM source-based coverage (Clang):
-  - runs tests (ctest)
+  - runs tests (via scripts/test.sh for consistency)
   - merges .profraw -> .profdata
   - exports LCOV via llvm-cov
-
 EOF
 }
 
@@ -39,7 +38,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[ ! -d "$BUILD_DIR" ] && echo "Build directory not found: $BUILD_DIR" && exit 1
+# Robust guard: do NOT use `[ ... ] && ...` with `set -e`
+[[ -d "$BUILD_DIR" ]] || { echo "Build directory not found: $BUILD_DIR"; exit 1; }
+
 cd "$BUILD_DIR"
 
 [[ -f CMakeCache.txt ]] || { echo "CMakeCache.txt not found in $BUILD_DIR; run configure first."; exit 1; }
@@ -59,26 +60,43 @@ COMPILER_ID="$(grep -E '^CMAKE_CXX_COMPILER_ID:STRING=' CMakeCache.txt | sed 's/
 command -v llvm-profdata >/dev/null 2>&1 || { echo "llvm-profdata not found in PATH"; exit 1; }
 command -v llvm-cov >/dev/null 2>&1 || { echo "llvm-cov not found in PATH"; exit 1; }
 
+# Ensure deterministic profile output location (ABSOLUTE path)
 mkdir -p coverage
 export LLVM_PROFILE_FILE="$PWD/coverage/wshell-%p-%m.profraw"
+echo "LLVM_PROFILE_FILE=$LLVM_PROFILE_FILE"
 
 echo "Running tests to generate .profraw..."
+# Use the repository script so behavior is consistent locally + CI.
+# We are currently in $BUILD_DIR; jump back to repo root via .. to call scripts/test.sh.
 if [[ -n "$CONFIG" ]]; then
-  ctest --output-on-failure --verbose -C "$CONFIG"
+  (cd .. && ./scripts/test.sh --build-dir "$BUILD_DIR" --config "$CONFIG")
 else
-  ctest --output-on-failure --verbose
+  (cd .. && ./scripts/test.sh --build-dir "$BUILD_DIR")
 fi
 
-ls coverage/*.profraw >/dev/null 2>&1 || { echo "No .profraw files generated."; exit 1; }
+# Collect profraws robustly (in case some ended up elsewhere)
+echo "Collecting .profraw files..."
+mapfile -t PROFRAWS < <(find . -type f -name '*.profraw' -print | sort)
+
+if [[ ${#PROFRAWS[@]} -eq 0 ]]; then
+  echo "No .profraw files generated."
+  echo "Sanity hints:"
+  echo "  - Was the build configured with Clang coverage flags?"
+  echo "  - Is ENABLE_COVERAGE=ON?"
+  echo "  - Does the test binary actually run instrumented code?"
+  exit 1
+fi
+
+echo "Found ${#PROFRAWS[@]} profraw files."
 
 echo "Merging profiles..."
-llvm-profdata merge -sparse coverage/*.profraw -o coverage/wshell.profdata
+llvm-profdata merge -sparse "${PROFRAWS[@]}" -o coverage/wshell.profdata
 
 # Find test binary (portable)
 WSHELL_TESTS="$(find . -type f -name wshell_tests -perm -111 | head -n 1 || true)"
 [[ -n "$WSHELL_TESTS" ]] || { echo "wshell_tests not found under $BUILD_DIR"; exit 1; }
 
-# Include shared library object if present for better coverage completeness
+# Include shared library object if present (better coverage completeness)
 WSHELL_LIB="$(find . -type f \( -name 'libwshell*.so' -o -name 'libwshell*.dylib' \) | head -n 1 || true)"
 
 echo "Exporting LCOV to $OUT_FILE..."
