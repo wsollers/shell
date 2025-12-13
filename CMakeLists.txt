@@ -80,9 +80,14 @@ else()
     
     add_compile_options(
         -fstack-protector-strong
-        -fstack-clash-protection
         -fno-common
     )
+
+    # -fstack-clash-protection is not supported on Apple Clang (macOS)
+    if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        add_compile_options(-fstack-clash-protection)
+    endif()
+
     
     # Control Flow Integrity (Intel CET) - if supported
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
