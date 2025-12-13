@@ -76,25 +76,6 @@ jobs:
         name: cppcheck-results
         path: cppcheck-report.xml
 
-  codacy:
-    name: Codacy Security Scan
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Run Codacy Analysis
-      uses: codacy/codacy-analysis-cli-action@master
-      with:
-        project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-        upload: true
-        format: sarif
-      continue-on-error: true
-    
-    - name: Upload to GitHub Security
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: results.sarif
-      continue-on-error: true
 
   devskim:
     name: DevSkim Security Scan
@@ -253,43 +234,3 @@ jobs:
         sarif_file: semgrep.sarif
       continue-on-error: true
 
-  sonarcloud:
-    name: SonarCloud
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang libc++-dev libc++abi-dev
-    
-    - name: Configure and Build
-      run: |
-        chmod +x scripts/*.sh
-        ./scripts/configure.sh --coverage
-        ./scripts/build.sh
-        ./scripts/test.sh
-    
-    - name: Generate coverage
-      run: |
-        cd build
-        lcov --capture --directory . --output-file coverage.info
-        lcov --remove coverage.info '/usr/*' '*/test/*' '_deps/*' --output-file coverage.info
-    
-    - name: SonarCloud Scan
-      uses: SonarSource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      with:
-        args: >
-          -Dsonar.projectKey=wsollers_shell
-          -Dsonar.organization=wsollers
-          -Dsonar.sources=src
-          -Dsonar.tests=test
-          -Dsonar.cfamily.compile-commands=build/compile_commands.json
-          -Dsonar.coverageReportPaths=build/coverage.info
-      continue-on-error: true
