@@ -65,9 +65,13 @@ else()
         -Wformat-security
         -Wnull-dereference
         -Wstack-protector
-        -Wtrampolines
         -Wno-unused-parameter
     )
+    
+    # GCC-specific warnings
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        add_compile_options(-Wtrampolines)
+    endif()
     
     # Fortify source (requires optimization)
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
