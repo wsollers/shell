@@ -4,7 +4,7 @@
 set -euo pipefail
 
 BUILD_DIR="build"
-CONFIG=""  # for multi-config generators
+CONFIG=""
 
 usage() {
   cat <<'EOF'
@@ -13,7 +13,6 @@ Usage: ./scripts/test.sh [OPTIONS]
 Options:
   --build-dir DIR     Build directory (default: build)
   --config CFG        Debug|Release|RelWithDebInfo|MinSizeRel (for multi-config)
-
 EOF
 }
 
@@ -22,11 +21,7 @@ while [[ $# -gt 0 ]]; do
     --build-dir) BUILD_DIR="${2:?Missing value for --build-dir}"; shift 2 ;;
     --config)    CONFIG="${2:?Missing value for --config}"; shift 2 ;;
     --help|-h)   usage; exit 0 ;;
-    *)
-      echo "Unknown option: $1"
-      usage
-      exit 1
-      ;;
+    *) echo "Unknown option: $1"; usage; exit 1 ;;
   esac
 done
 
@@ -35,7 +30,11 @@ done
 echo "Running tests..."
 cd "$BUILD_DIR"
 
-# Detect coverage + compiler from CMakeCache (best-effort)
+# Print test count up front (so you always know it saw tests)
+echo "Discovered tests:"
+ctest -N || true
+
+# Coverage/Clang profile placement (deterministic)
 COVERAGE_ENABLED="OFF"
 COMPILER_ID=""
 if [[ -f "CMakeCache.txt" ]]; then
@@ -43,24 +42,21 @@ if [[ -f "CMakeCache.txt" ]]; then
   COMPILER_ID="$(grep -E '^CMAKE_CXX_COMPILER_ID:STRING=' CMakeCache.txt | sed 's/^CMAKE_CXX_COMPILER_ID:STRING=//')"
 fi
 
-# Best practice: if Clang coverage is enabled, force absolute LLVM_PROFILE_FILE
 if [[ "${COVERAGE_ENABLED}" == "ON" && "${COMPILER_ID}" == "Clang" ]]; then
   mkdir -p coverage
-  if [[ -z "${LLVM_PROFILE_FILE:-}" ]]; then
-    export LLVM_PROFILE_FILE="$PWD/coverage/wshell-%p-%m.profraw"
-  else
-    case "$LLVM_PROFILE_FILE" in
-      /*) : ;;
-      *) export LLVM_PROFILE_FILE="$PWD/coverage/$LLVM_PROFILE_FILE" ;;
-    esac
-  fi
+  export LLVM_PROFILE_FILE="${LLVM_PROFILE_FILE:-$PWD/coverage/wshell-%p-%m.profraw}"
+  case "$LLVM_PROFILE_FILE" in
+    /*) : ;;
+    *) export LLVM_PROFILE_FILE="$PWD/coverage/$LLVM_PROFILE_FILE" ;;
+  esac
   echo "Coverage enabled (Clang). LLVM_PROFILE_FILE=$LLVM_PROFILE_FILE"
 fi
 
+# Actually run tests, always show progress
 if [[ -n "$CONFIG" ]]; then
-  ctest --output-on-failure --verbose -C "$CONFIG"
+  ctest --output-on-failure --progress -C "$CONFIG"
 else
-  ctest --output-on-failure --verbose
+  ctest --output-on-failure --progress
 fi
 
-echo "All tests passed!"
+echo "All tests passed."
