@@ -37,16 +37,6 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
 
-  copilot-review:
-    name: GitHub Copilot Review
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Copilot Code Review
-      uses: github/copilot-workspace@v1
-      continue-on-error: true
-
   clang-tidy:
     name: Clang-Tidy
     runs-on: ubuntu-latest
