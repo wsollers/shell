@@ -4,6 +4,7 @@
 #include "shell_core.h"
 #include <algorithm>
 #include <cctype>
+#include <expected>
 
 namespace wshell {
 
