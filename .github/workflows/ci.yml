@@ -20,6 +20,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang libc++-dev libc++abi-dev
+    
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: brew install llvm
+    
     - name: Configure (Unix)
       if: runner.os != 'Windows'
       run: |
@@ -53,8 +63,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install lcov
-      run: sudo apt-get update && sudo apt-get install -y lcov
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang libc++-dev libc++abi-dev lcov
     
     - name: Configure with Coverage
       run: |
