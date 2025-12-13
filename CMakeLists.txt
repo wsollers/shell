@@ -65,13 +65,9 @@ else()
         -Wformat-security
         -Wnull-dereference
         -Wstack-protector
+        -Wtrampolines
         -Wno-unused-parameter
     )
-
-    # GCC-specific warnings
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        add_compile_options(-Wtrampolines)
-    endif()
     
     # Fortify source (requires optimization)
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -166,6 +162,14 @@ if(ENABLE_BENCHMARKS)
         )
         set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
         FetchContent_MakeAvailable(googlebenchmark)
+        
+        # Disable strict warnings for Google Benchmark targets
+        if(TARGET benchmark)
+            if(NOT MSVC)
+                target_compile_options(benchmark PRIVATE -Wno-error -Wno-format-nonliteral)
+            endif()
+        endif()
+        
         message(STATUS "Google Benchmark will be built from source")
     else()
         message(STATUS "Using system Google Benchmark")
