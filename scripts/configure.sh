@@ -4,8 +4,6 @@
 
 set -e
 
-sudo apt-get install libc++-dev libc++abi-dev
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -62,8 +60,9 @@ mkdir -p "$BUILD_DIR"
 cmake -S . -B "$BUILD_DIR" \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+    -DCMAKE_CXX_FLAGS="-stdlib=libc++ -fPIC" \
     -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -lc++abi" \
+    -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -lc++abi" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DENABLE_TESTING="$ENABLE_TESTING" \
     -DENABLE_FUZZING="$ENABLE_FUZZING" \

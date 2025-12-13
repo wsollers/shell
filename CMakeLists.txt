@@ -77,7 +77,6 @@ else()
     add_compile_options(
         -fstack-protector-strong
         -fstack-clash-protection
-        -fPIE
         -fno-common
     )
     
