@@ -1,12 +1,8 @@
-name: "CodeQL Config"
-
-# Paths to ignore during analysis
 paths-ignore:
-  - "build/_deps/**"
-  - "_deps/**"
+  - "build/**"
+  - "**/_deps/**"
   - "test/**"
   - "fuzz/**"
 
-# Query suites to run
 queries:
   - uses: security-and-quality

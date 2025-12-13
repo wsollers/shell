@@ -25,3 +25,5 @@ target_include_directories(wshell_lib
 if(WIN32)
     target_compile_definitions(wshell_lib PRIVATE WSHELL_EXPORTS)
 endif()
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
