@@ -12,7 +12,7 @@ Usage: ./scripts/test.sh [OPTIONS]
 
 Options:
   --build-dir DIR     Build directory (default: build)
-  --config CFG        Debug|Release|RelWithDebInfo|MinSizeRel (for multi-config)
+  --config CFG        Debug|Release|RelWithDebInfo|MinSizeRel (multi-config)
 EOF
 }
 
@@ -25,38 +25,50 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[ ! -d "$BUILD_DIR" ] && echo "Build directory not found: $BUILD_DIR" && exit 1
+[[ -d "$BUILD_DIR" ]] || { echo "Build directory not found: $BUILD_DIR"; exit 1; }
 
 echo "Running tests..."
 cd "$BUILD_DIR"
 
-# Print test count up front (so you always know it saw tests)
 echo "Discovered tests:"
 ctest -N || true
 
-# Coverage/Clang profile placement (deterministic)
-COVERAGE_ENABLED="OFF"
-COMPILER_ID=""
-if [[ -f "CMakeCache.txt" ]]; then
-  grep -q '^ENABLE_COVERAGE:BOOL=ON$' CMakeCache.txt && COVERAGE_ENABLED="ON" || true
-  COMPILER_ID="$(grep -E '^CMAKE_CXX_COMPILER_ID:STRING=' CMakeCache.txt | sed 's/^CMAKE_CXX_COMPILER_ID:STRING=//')"
-fi
+# (Optional) make ctest print output on failure automatically
+export CTEST_OUTPUT_ON_FAILURE=1
 
-if [[ "${COVERAGE_ENABLED}" == "ON" && "${COMPILER_ID}" == "Clang" ]]; then
-  mkdir -p coverage
-  export LLVM_PROFILE_FILE="${LLVM_PROFILE_FILE:-$PWD/coverage/wshell-%p-%m.profraw}"
-  case "$LLVM_PROFILE_FILE" in
-    /*) : ;;
-    *) export LLVM_PROFILE_FILE="$PWD/coverage/$LLVM_PROFILE_FILE" ;;
-  esac
-  echo "Coverage enabled (Clang). LLVM_PROFILE_FILE=$LLVM_PROFILE_FILE"
-fi
-
-# Actually run tests, always show progress
+echo "Executing tests (ctest -VV)..."
+set +e
 if [[ -n "$CONFIG" ]]; then
-  ctest --output-on-failure --progress --verbose -C "$CONFIG"
+  ctest -VV --output-on-failure --progress -C "$CONFIG"
 else
-  ctest --output-on-failure --progress --verbose
+  ctest -VV --output-on-failure --progress
+fi
+RC=$?
+set -e
+
+echo "ctest exit code: $RC"
+
+if [[ $RC -ne 0 ]]; then
+  echo "----- Diagnostics -----"
+  echo "PWD: $PWD"
+
+  echo "Looking for test executable(s):"
+  find . -maxdepth 5 -type f -name wshell_tests -print || true
+
+  echo "If this is a runtime loader issue, try running the binary directly:"
+  echo "  ./test/wshell_tests --gtest_list_tests"
+  echo "  (or whatever path was printed above)"
+
+  # Helpful on Linux if loader is failing:
+  if command -v ldd >/dev/null 2>&1; then
+    WSHELL="$(find . -maxdepth 5 -type f -name wshell_tests -perm -111 | head -n 1)"
+    if [[ -n "${WSHELL:-}" ]]; then
+      echo "ldd on $WSHELL:"
+      ldd "$WSHELL" || true
+    fi
+  fi
+
+  exit "$RC"
 fi
 
 echo "All tests passed."
