@@ -169,10 +169,23 @@ endif()
 # ============================
 # Coverage (non-MSVC)
 # ============================
+# Code coverage (non-MSVC)
 if(ENABLE_COVERAGE AND NOT MSVC)
-    add_compile_options(--coverage -O0 -g)
-    add_link_options(--coverage)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        # LLVM source-based coverage (recommended with clang/llvm-profdata/llvm-cov)
+        add_compile_options(-O0 -g -fprofile-instr-generate -fcoverage-mapping)
+        add_link_options(-fprofile-instr-generate)
+        message(STATUS "Code coverage enabled: LLVM/Clang source-based coverage")
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        # GCC/gcov coverage (use gcovr/lcov)
+        add_compile_options(-O0 -g --coverage)
+        add_link_options(--coverage)
+        message(STATUS "Code coverage enabled: GCC/gcov coverage")
+    else()
+        message(WARNING "ENABLE_COVERAGE is ON, but compiler '${CMAKE_CXX_COMPILER_ID}' is not explicitly supported for coverage flags.")
+    endif()
 endif()
+
 
 # ============================
 # Dependencies
