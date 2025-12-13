@@ -27,10 +27,19 @@ jobs:
     - name: Configure with fuzzing
       run: |
         chmod +x scripts/*.sh
-        ./scripts/configure.sh --release --fuzz
+        # Configure without libc++ for fuzzing compatibility
+        cmake -S . -B build \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DENABLE_TESTING=OFF \
+          -DENABLE_FUZZING=ON \
+          -DENABLE_BENCHMARKS=OFF \
+          -DENABLE_COVERAGE=OFF \
+          -DENABLE_SANITIZERS=OFF
     
     - name: Build
-      run: ./scripts/build.sh
+      run: cmake --build build --parallel $(nproc)
     
     - name: Download previous corpus
       uses: actions/cache@v4
