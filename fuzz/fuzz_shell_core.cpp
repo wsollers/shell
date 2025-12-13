@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <string_view>
+#include <expected>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     std::string_view input(reinterpret_cast<const char*>(data), size);
