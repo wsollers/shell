@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+sudo apt-get install libc++-dev libc++abi-dev
 BUILD_DIR="build"
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 while [[ $# -gt 0 ]]; do
