@@ -24,13 +24,7 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: cpp
-        queries: security-and-quality
-        # Exclude third-party dependencies and test code
-        paths-ignore:
-          - '**/build/_deps/**'
-          - '**/_deps/**'
-          - '**/test/**'
-          - '**/fuzz/**'
+        config-file: ./.github/codeql/codeql-config.yml
     
     - name: Build
       run: |
