@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }} - ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        build_type: [Debug, Release]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        chmod +x scripts/*.sh
+        ./scripts/configure.sh --${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+    
+    - name: Configure (Windows)
+      if: runner.os == 'Windows'
+      run: .\scripts\configure.ps1 -${{ matrix.build_type }}
+    
+    - name: Build (Unix)
+      if: runner.os != 'Windows'
+      run: ./scripts/build.sh
+    
+    - name: Build (Windows)
+      if: runner.os == 'Windows'
+      run: .\scripts\build.ps1
+    
+    - name: Test (Unix)
+      if: runner.os != 'Windows'
+      run: ./scripts/test.sh
+    
+    - name: Test (Windows)
+      if: runner.os == 'Windows'
+      run: .\scripts\test.ps1
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install lcov
+      run: sudo apt-get update && sudo apt-get install -y lcov
+    
+    - name: Configure with Coverage
+      run: |
+        chmod +x scripts/*.sh
+        ./scripts/configure.sh --coverage
+    
+    - name: Build
+      run: ./scripts/build.sh
+    
+    - name: Test
+      run: ./scripts/test.sh
+    
+    - name: Generate Coverage
+      run: |
+        cd build
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' '*/test/*' '_deps/*' --output-file coverage.info
+    
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: wsollers/shell
+        files: ./build/coverage.info
