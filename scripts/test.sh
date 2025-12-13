@@ -54,9 +54,9 @@ fi
 
 # Actually run tests, always show progress
 if [[ -n "$CONFIG" ]]; then
-  ctest --output-on-failure --progress -C "$CONFIG"
+  ctest --output-on-failure --progress --verbose -C "$CONFIG"
 else
-  ctest --output-on-failure --progress
+  ctest --output-on-failure --progress --verbose
 fi
 
 echo "All tests passed."
