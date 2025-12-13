@@ -1,0 +1,68 @@
+name: Fuzzing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+  workflow_dispatch:
+
+jobs:
+  fuzz:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [fuzz_command_parser, fuzz_shell_core]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Clang with libFuzzer
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang libc++-dev libc++abi-dev
+    
+    - name: Configure with fuzzing
+      run: |
+        chmod +x scripts/*.sh
+        ./scripts/configure.sh --release --fuzz
+    
+    - name: Build
+      run: ./scripts/build.sh
+    
+    - name: Download previous corpus
+      uses: actions/cache@v4
+      with:
+        path: fuzz_corpus
+        key: fuzz-corpus-${{ matrix.target }}-${{ github.sha }}
+        restore-keys: |
+          fuzz-corpus-${{ matrix.target }}-
+    
+    - name: Run fuzz test
+      run: |
+        mkdir -p fuzz_corpus/${{ matrix.target }}
+        timeout 300 ./build/fuzz/${{ matrix.target }} \
+          fuzz_corpus/${{ matrix.target }} \
+          -max_total_time=300 \
+          -print_final_stats=1 || true
+    
+    - name: Upload crashes
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: fuzz-crashes-${{ matrix.target }}
+        path: |
+          crash-*
+          leak-*
+          timeout-*
+      continue-on-error: true
+    
+    - name: Check for crashes
+      run: |
+        if ls crash-* leak-* timeout-* 2>/dev/null; then
+          echo "::error::Fuzzing found crashes or leaks!"
+          exit 1
+        fi
+      continue-on-error: true
