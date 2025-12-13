@@ -88,9 +88,13 @@ else()
         add_compile_options(-fstack-clash-protection)
     endif()
 
-    
-    # Control Flow Integrity (Intel CET) - if supported
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    include(CheckCXXCompilerFlag)
+
+    # Control-Flow Protection (Intel CET) — only where supported
+    include(CheckCXXCompilerFlag)
+    check_cxx_compiler_flag("-fcf-protection=full" HAS_CF_PROTECTION_FULL)
+
+    if (HAS_CF_PROTECTION_FULL AND CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
         add_compile_options(-fcf-protection=full)
     endif()
     
