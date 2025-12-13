@@ -28,17 +28,20 @@ jobs:
       run: ./scripts/build.sh
     
     - name: Run benchmarks
+      id: run_benchmarks
       run: |
         if [ -f build/benchmark/wshell_benchmarks ]; then
           ./build/benchmark/wshell_benchmarks --benchmark_format=json > benchmark-results.json
+          echo "benchmarks_exist=true" >> $GITHUB_OUTPUT
         else
-          echo "No benchmarks built yet"
+          echo "No benchmarks built yet - skipping"
+          echo "benchmarks_exist=false" >> $GITHUB_OUTPUT
         fi
       continue-on-error: true
     
     - name: Store benchmark result
       uses: benchmark-action/github-action-benchmark@v1
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: steps.run_benchmarks.outputs.benchmarks_exist == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
       with:
         tool: 'googlecpp'
         output-file-path: benchmark-results.json
@@ -51,6 +54,7 @@ jobs:
     
     - name: Upload benchmark results
       uses: actions/upload-artifact@v4
+      if: steps.run_benchmarks.outputs.benchmarks_exist == 'true'
       with:
         name: benchmark-results
         path: benchmark-results.json
