@@ -1,31 +1,73 @@
 // Copyright (c) 2024 William Sollers
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include "../src/lib/command_parser.h"
-#include <cstdint>
-#include <cstddef>
-#include <string_view>
+#include "command_parser.h"
+#include <algorithm>
+#include <cctype>
+#include <ranges>
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-    std::string_view input(reinterpret_cast<const char*>(data), size);
+namespace wshell {
+
+std::vector<std::string> CommandParser::tokenize(std::string_view input) {
+    std::vector<std::string> tokens;
     
-    try {
-        auto tokens = wshell::CommandParser::tokenize(input);
-        for (const auto& token : tokens) {
-            volatile auto len = token.length();
-            (void)len;
+    if (input.empty()) {
+        return tokens;
+    }
+    
+    std::string current;
+    bool in_quotes = false;
+    
+    for (char c : input) {
+        if (c == '"') {
+            in_quotes = !in_quotes;
+        } else if (std::isspace(static_cast<unsigned char>(c)) && !in_quotes) {
+            if (!current.empty()) {
+                tokens.push_back(std::move(current));
+                current.clear();
+            }
+        } else {
+            current += c;
         }
-    } catch (...) {
-        return -1;
     }
     
-    try {
-        auto trimmed = wshell::CommandParser::trim(input);
-        volatile auto len = trimmed.length();
-        (void)len;
-    } catch (...) {
-        return -1;
+    if (!current.empty()) {
+        tokens.push_back(std::move(current));
     }
     
-    return 0;
+    return tokens;
 }
+
+std::string_view CommandParser::trim(std::string_view str) noexcept {
+    // Find first non-whitespace
+    auto start = std::ranges::find_if(str, [](unsigned char c) {
+        return !std::isspace(c);
+    });
+    
+    if (start == str.end()) {
+        return {};
+    }
+    
+    // Find last non-whitespace
+    #if defined(_LIBCPP_VERSION)
+    // libc++ with Clang has full support for std::ranges::views::reverse
+    auto end = std::ranges::find_if(str | std::ranges::views::reverse, [](unsigned char c) {
+        return !std::isspace(c);
+    }).base();
+    #else
+    // libstdc++ or MSVC: iterate backwards manually
+    auto end = str.end();
+    while (end != start) {
+        --end;
+        if (!std::isspace(static_cast<unsigned char>(*end))) {
+            ++end;  // Move one past the last non-whitespace
+            break;
+        }
+    }
+    #endif
+    
+    return str.substr(std::distance(str.begin(), start), 
+                      std::distance(start, end));
+}
+
+} // namespace wshell
