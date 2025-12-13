@@ -10,102 +10,88 @@ jobs:
   build-and-test:
     name: ${{ matrix.os }} - ${{ matrix.build_type }}
     runs-on: ${{ matrix.os }}
-    
+
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         build_type: [Debug, Release]
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install dependencies (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang libc++-dev libc++abi-dev
-    
-    - name: Install dependencies (macOS)
-      if: runner.os == 'macOS'
-      run: brew install llvm
-    
-    - name: Configure (Unix)
-      if: runner.os != 'Windows'
-      run: |
-        chmod +x scripts/*.sh
-        ./scripts/configure.sh --${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
-    
-    - name: Configure (Windows)
-      if: runner.os == 'Windows'
-      run: .\scripts\configure.ps1 -${{ matrix.build_type }}
-    
-    - name: Build (Unix)
-      if: runner.os != 'Windows'
-      run: ./scripts/build.sh
-    
-    - name: Build (Windows)
-      if: runner.os == 'Windows'
-      run: .\scripts\build.ps1
-    
-    - name: Test (Unix)
-      if: runner.os != 'Windows'
-      run: ./scripts/test.sh
-    
-    - name: Test (Windows)
-      if: runner.os == 'Windows'
-      run: .\scripts\test.ps1
+      - uses: actions/checkout@v4
+
+      # ---------- Dependencies ----------
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang libc++-dev libc++abi-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install llvm
+
+      # ---------- Configure ----------
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/configure.sh --${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: .\scripts\configure.ps1 -${{ matrix.build_type }}
+
+      # ---------- Build ----------
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
+        run: ./scripts/build.sh
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: .\scripts\build.ps1
+
+      # ---------- Test ----------
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
+        run: ./scripts/test.sh
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        run: .\scripts\test.ps1
+
 
   coverage:
-    name: Code Coverage
+    name: Code Coverage (Clang + llvm-cov)
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang llvm libc++-dev libc++abi-dev
-    
-    - name: Configure with Coverage
-      run: |
-        chmod +x scripts/*.sh
-        # Use Clang with source-based coverage (not gcov)
-        cmake -S . -B build \
-          -DCMAKE_CXX_COMPILER=clang++ \
-          -DCMAKE_C_COMPILER=clang \
-          -DCMAKE_CXX_FLAGS="-stdlib=libc++ -fPIC -fprofile-instr-generate -fcoverage-mapping" \
-          -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -lc++abi -fprofile-instr-generate" \
-          -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -lc++abi -fprofile-instr-generate" \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DENABLE_TESTING=ON \
-          -DENABLE_FUZZING=OFF \
-          -DENABLE_BENCHMARKS=OFF \
-          -DENABLE_COVERAGE=OFF \
-          -DENABLE_SANITIZERS=OFF
-    
-    - name: Build
-      run: cmake --build build --parallel $(nproc)
-    
-    - name: Test
-      run: |
-        cd build
-        LLVM_PROFILE_FILE="wshell-%p.profraw" ctest --output-on-failure --verbose
-    
-    - name: Generate Coverage with llvm-cov
-      run: |
-        cd build
-        llvm-profdata merge -sparse *.profraw -o wshell.profdata
-        llvm-cov export ./test/wshell_tests \
-          -instr-profile=wshell.profdata \
-          -format=lcov \
-          -ignore-filename-regex='.*/(test|_deps)/.*' \
-          > coverage.info
-    
-    - name: Upload to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        slug: wsollers/shell
-        files: ./build/coverage.info
+      - uses: actions/checkout@v4
+
+      # ---------- Dependencies ----------
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm libc++-dev libc++abi-dev
+
+      # ---------- Configure with coverage ----------
+      - name: Configure (coverage)
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/configure.sh --coverage --build-dir build
+
+      # ---------- Build ----------
+      - name: Build
+        run: ./scripts/build.sh --build-dir build
+
+      # ---------- Generate coverage ----------
+      - name: Generate coverage (llvm-profdata + llvm-cov)
+        run: ./scripts/coverage.sh --build-dir build
+
+      # ---------- Upload ----------
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: wsollers/shell
+          files: ./build/coverage.info
