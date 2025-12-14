@@ -212,10 +212,16 @@ jobs:
         sarif_file: ${{ steps.msdo.outputs.sarifFile }}
         
     - name: Upload to Azure Defender for Cloud (if Azure credentials available)
-      if: success() && secrets.AZURE_CREDENTIALS != ''
+      if: success()
       run: |
-        echo "Defender for DevOps results are also being sent to Azure Security Center"
-        echo "Check your Azure portal at: https://portal.azure.com/#view/Microsoft_Azure_Security/SecurityMenuBlade/~/0"
+        if [ -n "$AZURE_CREDENTIALS" ]; then
+          echo "Defender for DevOps results are also being sent to Azure Security Center"
+          echo "Check your Azure portal at: https://portal.azure.com/#view/Microsoft_Azure_Security/SecurityMenuBlade/~/0"
+        else
+          echo "Azure credentials not configured - results available only in GitHub Security tab"
+        fi
+      env:
+        AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
   script-analysis:
     name: Script Security Analysis
