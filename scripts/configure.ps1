@@ -1,6 +1,7 @@
 # Copyright (c) 2024 William Sollers
 # SPDX-License-Identifier: BSD-2-Clause
 
+[CmdletBinding()]
 param(
     [switch]$Debug,
     [switch]$Release,
@@ -8,61 +9,91 @@ param(
     [switch]$Coverage,
     [switch]$Fuzz,
     [switch]$Benchmark,
+
     [string]$BuildDir = "build",
+
+    # Optional: choose generator/arch explicitly (defaults match MSVC 2022 x64 best practice)
+    [string]$Generator = "Visual Studio 17 2022",
+    [string]$Arch = "x64",
+
     [switch]$Help
 )
 
-if ($Help) {
-    Write-Host "Usage: .\configure.ps1 [OPTIONS]"
-    Write-Host "Options:"
-    Write-Host "  -Debug          Configure for Debug build"
-    Write-Host "  -Release        Configure for Release build (default)"
-    Write-Host "  -Test           Configure for testing with sanitizers"
-    Write-Host "  -Coverage       Configure for code coverage"
-    Write-Host "  -Fuzz           Enable fuzz testing"
-    Write-Host "  -Benchmark      Enable benchmarks"
-    Write-Host "  -BuildDir DIR   Set build directory (default: build)"
-    Write-Host "  -Help           Show this help message"
-    exit 0
+$ErrorActionPreference = "Stop"
+
+function Show-Usage {
+@"
+Usage: .\scripts\configure.ps1 [OPTIONS]
+
+Build modes (choose one; default: -Release):
+  -Debug         Configure Debug
+  -Release       Configure Release
+  -Test          Configure RelWithDebInfo + ENABLE_SANITIZERS=ON (MSVC may ignore sanitizers unless clang-cl)
+  -Coverage      Configure Debug + ENABLE_COVERAGE=ON (coverage collection is typically Linux/Clang)
+
+Feature toggles:
+  -Fuzz          ENABLE_FUZZING=ON
+  -Benchmark     ENABLE_BENCHMARKS=ON
+
+Other:
+  -BuildDir DIR  Build directory (default: build)
+  -Generator STR CMake generator (default: Visual Studio 17 2022)
+  -Arch STR      Generator architecture (default: x64)
+  -Help          Show help
+
+Examples:
+  .\scripts\configure.ps1 -Debug
+  .\scripts\configure.ps1 -Release -Benchmark
+  .\scripts\configure.ps1 -Coverage -BuildDir build
+"@
 }
 
+if ($Help) { Show-Usage; exit 0 }
+
+# Determine config semantics (MSVC generators are typically multi-config)
 $BuildType = "Release"
-$EnableTesting = "ON"
-$EnableFuzzing = "OFF"
-$EnableBenchmarks = "OFF"
-$EnableCoverage = "OFF"
-$EnableSanitizers = "OFF"
+if ($Debug)   { $BuildType = "Debug" }
+if ($Test)    { $BuildType = "RelWithDebInfo" }
+if ($Coverage){ $BuildType = "Debug" }
+if (-not ($Debug -or $Release -or $Test -or $Coverage)) { $BuildType = "Release" }
 
-if ($Debug) { $BuildType = "Debug" }
-elseif ($Test) { $BuildType = "RelWithDebInfo"; $EnableSanitizers = "ON" }
-elseif ($Coverage) { $BuildType = "Debug"; $EnableCoverage = "ON" }
-
-if ($Fuzz) { $EnableFuzzing = "ON" }
-if ($Benchmark) { $EnableBenchmarks = "ON" }
+$EnableTesting    = "ON"
+$EnableFuzzing    = if ($Fuzz) { "ON" } else { "OFF" }
+$EnableBenchmarks = if ($Benchmark) { "ON" } else { "OFF" }
+$EnableCoverage   = if ($Coverage) { "ON" } else { "OFF" }
+$EnableSanitizers = if ($Test) { "ON" } else { "OFF" }
 
 Write-Host "Configuring wshell..." -ForegroundColor Green
-Write-Host "Build type: $BuildType"
 Write-Host "Build directory: $BuildDir"
-Write-Host "Testing: $EnableTesting"
-Write-Host "Fuzzing: $EnableFuzzing"
-Write-Host "Benchmarks: $EnableBenchmarks"
-Write-Host "Coverage: $EnableCoverage"
-Write-Host "Sanitizers: $EnableSanitizers"
+Write-Host "Build type:      $BuildType"
+Write-Host "Testing:         $EnableTesting"
+Write-Host "Fuzzing:         $EnableFuzzing"
+Write-Host "Benchmarks:      $EnableBenchmarks"
+Write-Host "Coverage:        $EnableCoverage"
+Write-Host "Sanitizers:      $EnableSanitizers"
+Write-Host "Generator:       $Generator"
+Write-Host "Arch:            $Arch"
 
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 
-cmake -S . -B $BuildDir `
-    -DCMAKE_BUILD_TYPE=$BuildType `
-    -DENABLE_TESTING=$EnableTesting `
-    -DENABLE_FUZZING=$EnableFuzzing `
-    -DENABLE_BENCHMARKS=$EnableBenchmarks `
-    -DENABLE_COVERAGE=$EnableCoverage `
-    -DENABLE_SANITIZERS=$EnableSanitizers
+# For Visual Studio generators, CMAKE_BUILD_TYPE is ignored at build time,
+# but we still pass it because it helps non-MSVC generators and keeps parity with Unix.
+$cmakeArgs = @(
+  "-S", ".", "-B", $BuildDir,
+  "-G", $Generator,
+  "-A", $Arch,
+  "-DCMAKE_BUILD_TYPE=$BuildType",
+  "-DENABLE_TESTING=$EnableTesting",
+  "-DENABLE_FUZZING=$EnableFuzzing",
+  "-DENABLE_BENCHMARKS=$EnableBenchmarks",
+  "-DENABLE_COVERAGE=$EnableCoverage",
+  "-DENABLE_SANITIZERS=$EnableSanitizers"
+)
 
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "Configuration complete!" -ForegroundColor Green
-    Write-Host "To build, run: .\scripts\build.ps1"
-} else {
-    Write-Host "Configuration failed!" -ForegroundColor Red
-    exit 1
-}
+& cmake @cmakeArgs
+if ($LASTEXITCODE -ne 0) { throw "CMake configure failed with exit code $LASTEXITCODE" }
+
+Write-Host "Configuration complete!" -ForegroundColor Green
+Write-Host "Next:" -ForegroundColor Green
+Write-Host "  .\scripts\build.ps1 -BuildDir $BuildDir -Config $BuildType"
+Write-Host "  .\scripts\test.ps1  -BuildDir $BuildDir -Config $BuildType"

@@ -17,9 +17,17 @@ ENABLE_BENCHMARKS=OFF
 ENABLE_COVERAGE=OFF
 ENABLE_SANITIZERS=OFF
 
-# Unix toolchain defaults (your repo prefers clang + libc++ on Unix)
+# Toolchain defaults
 C_COMPILER="clang"
 CXX_COMPILER="clang++"
+
+# New: explicit libc++ toggle
+FORCE_LIBCXX=OFF
+
+# Extra flags (avoid baking -stdlib=libc++ into all builds unless requested)
+EXTRA_CXX_FLAGS="-fPIC"
+EXTRA_EXE_LINKER_FLAGS=""
+EXTRA_SHARED_LINKER_FLAGS=""
 
 usage() {
   cat <<'EOF'
@@ -32,8 +40,11 @@ Build presets:
   --coverage       Configure for coverage (Debug + coverage)
 
 Feature toggles:
-  --fuzz           Enable fuzz testing
+  --fuzz           Enable fuzz testing (Clang 18+ required; will auto-skip if missing)
   --benchmark      Enable benchmarks
+
+Stdlib:
+  --libcxx         Force Clang to use libc++ (requires libc++ + libc++abi installed)
 
 Directories:
   --build-dir DIR  Build directory (default: build)
@@ -53,6 +64,7 @@ while [[ $# -gt 0 ]]; do
     --coverage)  BUILD_TYPE="Debug"; ENABLE_COVERAGE=ON; shift ;;
     --fuzz)      ENABLE_FUZZING=ON; shift ;;
     --benchmark) ENABLE_BENCHMARKS=ON; shift ;;
+    --libcxx)    FORCE_LIBCXX=ON; shift ;;
     --build-dir) BUILD_DIR="${2:?Missing value for --build-dir}"; shift 2 ;;
     --cc)        C_COMPILER="${2:?Missing value for --cc}"; shift 2 ;;
     --cxx)       CXX_COMPILER="${2:?Missing value for --cxx}"; shift 2 ;;
@@ -64,6 +76,43 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+EXTRA_DEFS=()
+if [[ "$ENABLE_FUZZING" == "ON" ]]; then
+  EXTRA_DEFS+=(-DWSHELL_FORCE_LIBCXX=ON)
+fi
+
+# If libc++ is requested, set flags.
+if [[ "$FORCE_LIBCXX" == "ON" ]]; then
+  EXTRA_CXX_FLAGS="${EXTRA_CXX_FLAGS} -stdlib=libc++"
+  EXTRA_EXE_LINKER_FLAGS="${EXTRA_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi"
+  EXTRA_SHARED_LINKER_FLAGS="${EXTRA_SHARED_LINKER_FLAGS} -stdlib=libc++ -lc++abi"
+fi
+
+# If fuzzing is enabled, we REQUIRE:
+# - Clang
+# - Clang >= 18
+# - (if --libcxx) libc++ usable
+if [[ "$ENABLE_FUZZING" == "ON" ]]; then
+  if ! "$CXX_COMPILER" --version 2>/dev/null | grep -qi clang; then
+    echo -e "${YELLOW}Fuzzing: skipped (requires Clang; detected: $("$CXX_COMPILER" --version | head -n 1))${NC}"
+    ENABLE_FUZZING=OFF
+  else
+    CLANG_VER="$("$CXX_COMPILER" --version | head -n 1 | sed -n 's/.*clang version \([0-9]\+\).*/\1/p')"
+    CLANG_VER="${CLANG_VER:-0}"
+    if [[ "$CLANG_VER" -lt 18 ]]; then
+      echo -e "${YELLOW}Fuzzing: skipped (requires Clang >= 18; detected major=$CLANG_VER)${NC}"
+      ENABLE_FUZZING=OFF
+    fi
+  fi
+
+  if [[ "$ENABLE_FUZZING" == "ON" && "$FORCE_LIBCXX" == "ON" ]]; then
+    # Quick libc++ sanity test: preprocess should succeed with -stdlib=libc++
+    if ! echo | "$CXX_COMPILER" -x c++ -std=c++23 -stdlib=libc++ -E - >/dev/null 2>&1; then
+      echo -e "${YELLOW}Fuzzing: skipped (libc++ not usable; install libc++/libc++abi dev packages)${NC}"
+      ENABLE_FUZZING=OFF
+    fi
+  fi
+fi
 
 echo -e "${GREEN}Configuring wshell...${NC}"
 echo "Build type:   $BUILD_TYPE"
@@ -75,22 +124,26 @@ echo "Fuzzing:      $ENABLE_FUZZING"
 echo "Benchmarks:   $ENABLE_BENCHMARKS"
 echo "Coverage:     $ENABLE_COVERAGE"
 echo "Sanitizers:   $ENABLE_SANITIZERS"
+echo "Force libc++: $FORCE_LIBCXX"
+echo "Extra CXX flags:          ${EXTRA_CXX_FLAGS}"
+echo "Extra EXE linker flags:   ${EXTRA_EXE_LINKER_FLAGS:-<none>}"
+echo "Extra SHARED linker flags:${EXTRA_SHARED_LINKER_FLAGS:-<none>}"
 
 mkdir -p "$BUILD_DIR"
 
-# Best practice: feature switches as -D options; toolchain explicit.
-# Your project standardizes on clang + libc++ on Unix; keep that here.
 cmake -S . -B "$BUILD_DIR" \
   -DCMAKE_C_COMPILER="$C_COMPILER" \
   -DCMAKE_CXX_COMPILER="$CXX_COMPILER" \
-  -DCMAKE_CXX_FLAGS="-stdlib=libc++ -fPIC" \
-  -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -lc++abi" \
-  -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -lc++abi" \
+  -DCMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS" \
+  -DCMAKE_EXE_LINKER_FLAGS="$EXTRA_EXE_LINKER_FLAGS" \
+  -DCMAKE_SHARED_LINKER_FLAGS="$EXTRA_SHARED_LINKER_FLAGS" \
   -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
   -DENABLE_TESTING="$ENABLE_TESTING" \
   -DENABLE_FUZZING="$ENABLE_FUZZING" \
   -DENABLE_BENCHMARKS="$ENABLE_BENCHMARKS" \
   -DENABLE_COVERAGE="$ENABLE_COVERAGE" \
-  -DENABLE_SANITIZERS="$ENABLE_SANITIZERS"
+  -DENABLE_SANITIZERS="$ENABLE_SANITIZERS" \
+  "${EXTRA_DEFS[@]}"
 
 echo -e "${GREEN}Configuration complete!${NC}"
+echo "Next: ./scripts/build.sh --build-dir $BUILD_DIR"

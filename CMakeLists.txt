@@ -31,6 +31,16 @@ option(ENABLE_FUZZING "Enable fuzz testing" OFF)
 option(ENABLE_BENCHMARKS "Enable benchmarks" OFF)
 option(ENABLE_COVERAGE "Enable code coverage" OFF)
 option(ENABLE_SANITIZERS "Enable sanitizers (ASan, UBSan, etc.)" OFF)
+option(WSHELL_FORCE_LIBCXX "Force Clang libc++/libc++abi on non-MSVC builds" OFF)
+
+if(NOT MSVC AND WSHELL_FORCE_LIBCXX)
+  add_compile_options(-stdlib=libc++)
+  add_link_options(-stdlib=libc++ -lc++abi)
+endif()
+
+if(ENABLE_FUZZING AND NOT MSVC)
+  set(WSHELL_FORCE_LIBCXX ON CACHE BOOL "" FORCE)
+endif()
 
 # ============================
 # Build type
@@ -232,9 +242,14 @@ if(ENABLE_TESTING)
     add_subdirectory(test)
 endif()
 
+# Track whether fuzz targets were actually enabled/built by fuzz/CMakeLists.txt
+set(WSHELL_FUZZ_ENABLED OFF CACHE INTERNAL "Whether fuzz targets are enabled")
+
 if(ENABLE_FUZZING)
+    message(STATUS "Fuzzing: requested (ENABLE_FUZZING=ON) - configuring fuzz targets...")
     add_subdirectory(fuzz)
 endif()
+
 
 # ============================
 # Installation
@@ -254,7 +269,8 @@ message(STATUS "  Build type:    ${CMAKE_BUILD_TYPE}")
 message(STATUS "  C++ standard:  ${CMAKE_CXX_STANDARD}")
 message(STATUS "  Compiler:      ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "  Testing:       ${ENABLE_TESTING}")
-message(STATUS "  Fuzzing:       ${ENABLE_FUZZING}")
+message(STATUS "  Fuzzing (requested): ${ENABLE_FUZZING}")
+message(STATUS "  Fuzzing (effective): ${WSHELL_FUZZ_ENABLED}")
 message(STATUS "  Benchmarks:    ${ENABLE_BENCHMARKS}")
 message(STATUS "  Coverage:      ${ENABLE_COVERAGE}")
 message(STATUS "  Sanitizers:    ${ENABLE_SANITIZERS}")
