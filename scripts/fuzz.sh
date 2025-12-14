@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# shellcheck source=scripts/common.sh
 source "$(dirname "$0")/common.sh"
 
 TARGET="${1:-}"

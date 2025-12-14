@@ -1,3 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+
 BUILD_DIR="build"
-[ -d "$BUILD_DIR" ] && rm -rf "$BUILD_DIR" && echo "Clean complete!" || echo "Nothing to clean."
+if [[ -d "$BUILD_DIR" ]]; then
+  rm -rf "$BUILD_DIR"
+  echo "Clean complete!"
+else
+  echo "Nothing to clean."
+fi

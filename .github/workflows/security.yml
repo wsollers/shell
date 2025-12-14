@@ -148,15 +148,42 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      continue-on-error: true
+      
     - name: Run Microsoft Security DevOps
       uses: microsoft/security-devops-action@v1.6.0
       id: msdo
-      
-    - name: Upload alerts to Security tab
+      with:
+        # Send data to Azure Security Center (optional)
+        # config: |
+        #   {
+        #     "tools": {
+        #       "guardian": {
+        #         "args": {
+        #           "azure-tenant-id": "${{ secrets.AZURE_TENANT_ID }}",
+        #           "azure-subscription-id": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+        #           "azure-resource-group": "${{ secrets.AZURE_RESOURCE_GROUP }}",
+        #           "azure-workspace-name": "${{ secrets.AZURE_WORKSPACE_NAME }}"
+        #         }
+        #       }
+        #     }
+        #   }
+        
+    - name: Upload alerts to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: ${{ steps.msdo.outputs.sarifFile }}
+        
+    - name: Upload to Azure Defender for Cloud (if Azure credentials available)
+      if: success() && env.AZURE_CREDENTIALS != ''
+      run: |
+        echo "Defender for DevOps results are also being sent to Azure Security Center"
+        echo "Check your Azure portal at: https://portal.azure.com/#view/Microsoft_Azure_Security/SecurityMenuBlade/~/0"
 
   script-analysis:
     name: Script Security Analysis
