@@ -31,7 +31,6 @@ option(ENABLE_FUZZING "Enable fuzz testing" OFF)
 option(ENABLE_BENCHMARKS "Enable benchmarks" OFF)
 option(ENABLE_COVERAGE "Enable code coverage" OFF)
 option(ENABLE_SANITIZERS "Enable sanitizers (ASan, UBSan, etc.)" OFF)
-option(ENABLE_FLAME_GRAPHS "Enable flame graph profiling for benchmarks" OFF)
 option(WSHELL_FORCE_LIBCXX "Force Clang libc++/libc++abi on non-MSVC builds" OFF)
 
 if(NOT MSVC AND WSHELL_FORCE_LIBCXX)
@@ -201,6 +200,24 @@ if(ENABLE_COVERAGE AND NOT MSVC)
     endif()
 endif()
 
+# ============================
+# New ChatGPT files library
+# ============================
+add_library(shell_core
+  src/lexer.cpp
+  src/parser.cpp
+  src/exec_common.cpp
+  src/exec_linux.cpp
+  src/exec_macos.cpp
+  src/exec_win32.cpp
+)
+target_include_directories(shell_core PUBLIC include)
+
+# Apply security/hardening flags to the new library
+target_compile_options(shell_core PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
+)
 
 # ============================
 # Dependencies
@@ -220,6 +237,12 @@ if(ENABLE_TESTING)
         set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
         FetchContent_MakeAvailable(googletest)
     endif()
+    
+    # Add new ChatGPT test files
+    add_executable(shell_tests tests/test_parser.cpp)
+    target_link_libraries(shell_tests PRIVATE shell_core gtest_main)
+    include(GoogleTest)
+    gtest_discover_tests(shell_tests)
 endif()
 
 if(ENABLE_BENCHMARKS)
@@ -257,10 +280,14 @@ if(ENABLE_BENCHMARKS)
         # Add specific flags to suppress problematic warnings
         target_compile_options(benchmark PRIVATE -Wno-format-nonliteral -Wno-error)
     endif()
+    
+    # Add new ChatGPT benchmark files
+    add_executable(shell_bench bench/bench_parser.cpp)
+    target_link_libraries(shell_bench PRIVATE shell_core benchmark::benchmark)
 endif()
 
 # ============================
-# Subdirectories
+# Subdirectories (original enterprise structure)
 # ============================
 add_subdirectory(src/lib)
 add_subdirectory(src/main)
@@ -279,13 +306,25 @@ set(WSHELL_FUZZ_ENABLED OFF CACHE INTERNAL "Whether fuzz targets are enabled")
 if(ENABLE_FUZZING)
     message(STATUS "Fuzzing: requested (ENABLE_FUZZING=ON) - configuring fuzz targets...")
     add_subdirectory(fuzz)
+    # Also add new ChatGPT fuzz files directly
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_executable(fuzz_parse fuzz/fuzz_parse.cpp)
+        target_link_libraries(fuzz_parse PRIVATE shell_core)
+        target_compile_options(fuzz_parse PRIVATE
+            -fsanitize=fuzzer,address,undefined
+            -fno-omit-frame-pointer
+        )
+        target_link_options(fuzz_parse PRIVATE
+            -fsanitize=fuzzer,address,undefined
+        )
+        set(WSHELL_FUZZ_ENABLED ON CACHE INTERNAL "Whether fuzz targets are enabled")
+    endif()
 endif()
-
 
 # ============================
 # Installation
 # ============================
-install(TARGETS wshell wshell_lib
+install(TARGETS wshell wshell_lib shell_core
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -305,5 +344,4 @@ message(STATUS "  Fuzzing (effective): ${WSHELL_FUZZ_ENABLED}")
 message(STATUS "  Benchmarks:    ${ENABLE_BENCHMARKS}")
 message(STATUS "  Coverage:      ${ENABLE_COVERAGE}")
 message(STATUS "  Sanitizers:    ${ENABLE_SANITIZERS}")
-message(STATUS "  Flame Graphs:  ${ENABLE_FLAME_GRAPHS}")
 message(STATUS "============================")
