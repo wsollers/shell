@@ -1,17 +1,44 @@
 name: "Security CodeQL Config"
 disable-default-rules: false
 
-paths-ignore:
-  - "build/**/_deps/**"
-  - "**/build/**/_deps/**"
-  - "_deps/**"
-  - "**/_deps/**"
-
+# Only scan our source code, explicitly exclude everything else
 paths:
-  - "src/**"
+  - "src/lib/**"
+  - "src/main/**"
   - "test/**"
   - "bench/**"
   - "fuzz/**"
+
+# Comprehensive exclusion of all third-party and build artifacts
+paths-ignore:
+  # All build directories
+  - "build/**"
+  - "**/build/**"
+  # CMake FetchContent directories  
+  - "_deps/**"
+  - "**/_deps/**"
+  - "**/googletest-src/**"
+  - "**/googlebenchmark-src/**"
+  - "**/googletest-build/**"
+  - "**/googlebenchmark-build/**"
+  # Platform-specific build paths
+  - "build/linux-debug/**"
+  - "build/linux-release/**"
+  - "build/linux-coverage/**"
+  - "build/linux-fuzz/**"
+  - "build/linux-bench/**"
+  - "build/windows-msvc-debug/**"
+  - "build/windows-msvc-release/**"
+  - "build/macos-debug/**"
+  - "build/macos-release/**"
+  # External dependencies
+  - "**/external/**"
+  - "**/third_party/**"
+  - "**/vendor/**"
+  # Generated files
+  - "**/.cmake/**"
+  - "**/CMakeFiles/**"
+  - "**/*.dir/**"
 
 queries:
   - uses: security-and-quality

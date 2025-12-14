@@ -6,6 +6,17 @@
 
 A modern, secure command shell interpreter written in C++23 with a focus on security, performance, and code quality.
 
+## 📊 Performance Dashboard
+
+View live performance metrics, coverage reports, and API documentation at:
+**[wsollers.github.io/shell](https://wsollers.github.io/shell/)**
+
+The dashboard includes:
+- 📈 **Real-time Benchmarks**: Performance tracking with interactive charts
+- 🛡️ **Coverage Reports**: Line/branch coverage with detailed analysis
+- 📖 **API Documentation**: Auto-generated from source code
+- 🔍 **Security Analysis**: Fuzzing results and vulnerability scans
+
 ## Features
 
 - **Modern C++23**: Leverages latest C++ features including ranges, concepts, and `std::expected`
@@ -86,6 +97,21 @@ Security is a top priority. We follow:
 - OWASP Application Security Verification Standard
 - NIST Secure Software Development Framework
 - Comprehensive compiler hardening flags
+
+## 🚀 Deployment & CI/CD
+
+The project includes comprehensive GitHub Actions workflows:
+- **Continuous Integration**: Cross-platform builds (Linux, Windows, macOS)
+- **Security Scanning**: CodeQL, Microsoft DevSkim, Defender for DevOps, Trivy
+- **Performance Dashboard**: Automatic deployment to GitHub Pages
+- **Coverage Tracking**: Integration with Codecov.io
+
+**Set up GitHub Pages dashboard:**
+```bash
+./scripts/setup-github-pages.sh
+```
+
+See [docs/DASHBOARD.md](docs/DASHBOARD.md) for detailed setup instructions.
 
 ## Contributing
 

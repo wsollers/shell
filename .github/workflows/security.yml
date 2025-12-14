@@ -32,6 +32,12 @@ jobs:
         languages: ${{ matrix.language }}
         config-file: ./.github/codeql/codeql-config.yml
         
+    - name: Clean Build Directory
+      run: |
+        # Remove any existing build directories that might confuse CodeQL
+        rm -rf build/
+        rm -rf _deps/
+        
     - name: Install Dependencies
       run: |
         sudo apt-get update
@@ -70,7 +76,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@0.24.4
+      uses: aquasecurity/trivy-action@0.28.0
       with:
         scan-type: 'fs'
         format: 'sarif'

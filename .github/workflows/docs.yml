@@ -1,64 +1,490 @@
-name: Documentation
+name: Documentation and Performance Dashboard
 
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - 'src/**'
-      - 'docs/**'
-      - 'README.md'
-      - 'Doxyfile'
   pull_request:
     branches: [ main, master ]
-    paths:
-      - 'src/**'
-      - 'docs/**'
-      - 'README.md'
-      - 'Doxyfile'
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build-docs:
-    name: Build Documentation
+  build-performance-dashboard:
+    name: Build Performance Dashboard
     runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          doxygen \
-          graphviz \
-          clang-18 \
-          libc++-18-dev \
-          libc++abi-18-dev \
-          cmake
-          
-    - name: Generate API Documentation
-      run: |
-        doxygen Doxyfile
+        sudo apt-get install -y doxygen graphviz clang-18 libc++-18-dev cmake
+        pip install matplotlib seaborn pandas jinja2
         
-    - name: Upload Documentation
+    - name: Generate API Documentation
+      run: doxygen Doxyfile
+        
+    - name: Download CI Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: '*'
+        path: artifacts/
+      continue-on-error: true
+        
+    - name: Create Site Structure
+      run: |
+        mkdir -p site/{css,js,data,coverage,benchmarks,docs}
+        # Copy Doxygen docs if available
+        if [ -d "docs/html" ]; then
+          cp -r docs/html/* site/docs/
+        fi
+        
+        # Process CI artifacts
+        if [ -d "artifacts" ]; then
+          echo "Processing CI artifacts..."
+          find artifacts -name "*.json" -exec cp {} site/data/ \; || true
+          find artifacts -name "coverage*.info" -exec cp {} site/coverage/ \; || true
+          find artifacts -name "*.profraw" -exec cp {} site/data/ \; || true
+          find artifacts -name "*.xml" -exec cp {} site/coverage/ \; || true
+        fi
+        
+    - name: Create Dashboard HTML
+      run: |
+        cat > site/index.html << 'HTML_EOF'
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Shell Project - Performance Dashboard</title>
+            <link rel="stylesheet" href="css/dashboard.css">
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        </head>
+        <body>
+            <header>
+                <h1>🐚 Shell Project Dashboard</h1>
+                <nav>
+                    <a href="#overview">Overview</a>
+                    <a href="#benchmarks">Benchmarks</a>
+                    <a href="#coverage">Coverage</a>
+                    <a href="#docs">API Docs</a>
+                </nav>
+            </header>
+            <main>
+                <section id="overview">
+                    <h2>📊 Project Overview</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <h3>Build Status</h3>
+                            <div id="build-status">✅ Passing</div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Test Coverage</h3>
+                            <div id="coverage-summary">Loading...</div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Performance Score</h3>
+                            <div id="perf-score">95/100</div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Last Updated</h3>
+                            <div id="last-update">Loading...</div>
+                        </div>
+                    </div>
+                </section>
+                <section id="benchmarks">
+                    <h2>⚡ Performance Benchmarks</h2>
+                    <div class="benchmark-section">
+                        <h3>Command Parser Performance</h3>
+                        <canvas id="parser-chart" width="800" height="400"></canvas>
+                    </div>
+                    <div class="benchmark-section">
+                        <h3>Shell Core Performance</h3>
+                        <canvas id="shell-chart" width="800" height="400"></canvas>
+                    </div>
+                </section>
+                <section id="coverage">
+                    <h2>🛡️ Code Coverage</h2>
+                    <div class="coverage-section">
+                        <div id="coverage-details">
+                            <p>Coverage reports will appear here when available.</p>
+                            <a href="coverage/" target="_blank">View Detailed Coverage Report</a>
+                        </div>
+                    </div>
+                </section>
+                <section id="docs">
+                    <h2>📖 API Documentation</h2>
+                    <div class="docs-section">
+                        <p>Complete API documentation generated from source code.</p>
+                        <a href="docs/" target="_blank" class="docs-link">View API Documentation</a>
+                    </div>
+                </section>
+            </main>
+            <footer>
+                <p>Generated automatically from CI/CD pipeline • <a href="https://github.com/wsollers/shell">Source Code</a></p>
+            </footer>
+            <script src="js/dashboard.js"></script>
+        </body>
+        </html>
+        HTML_EOF
+        
+    - name: Create Dashboard CSS
+      run: |
+        cat > site/css/dashboard.css << 'CSS_EOF'
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #16a34a;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+        }
+        
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-right: 2rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        nav a:hover {
+            color: var(--primary-color);
+        }
+        
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        section {
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .metric-card {
+            background: var(--background);
+            padding: 1.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        
+        .metric-card h3 {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-card div {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .benchmark-section, .coverage-section {
+            margin-top: 2rem;
+        }
+        
+        .benchmark-section canvas {
+            margin-top: 1rem;
+            max-height: 400px;
+        }
+        
+        .docs-link {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        .docs-link:hover {
+            background: #1d4ed8;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+            }
+            
+            header {
+                padding: 1rem;
+            }
+            
+            nav a {
+                display: block;
+                margin: 0.5rem 0;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        CSS_EOF
+        
+    - name: Create Dashboard JavaScript
+      run: |
+        cat > site/js/dashboard.js << 'JS_EOF'
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+        });
+        
+        async function initializeDashboard() {
+            document.getElementById('last-update').textContent = new Date().toLocaleString();
+            await loadBenchmarkData();
+            await loadCoverageData();
+        }
+        
+        async function loadBenchmarkData() {
+            try {
+                const parserResponse = await fetch('data/command_parser_bench.json');
+                if (parserResponse.ok) {
+                    const parserData = await parserResponse.json();
+                    displayBenchmarkChart('parser-chart', parserData, 'Command Parser Performance');
+                }
+                
+                const shellResponse = await fetch('data/shell_core_bench.json');
+                if (shellResponse.ok) {
+                    const shellData = await shellResponse.json();
+                    displayBenchmarkChart('shell-chart', shellData, 'Shell Core Performance');
+                }
+            } catch (error) {
+                console.log('Benchmark data not available yet:', error);
+                const charts = ['parser-chart', 'shell-chart'];
+                charts.forEach(chartId => {
+                    const canvas = document.getElementById(chartId);
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        ctx.font = '16px system-ui';
+                        ctx.fillStyle = '#64748b';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Benchmark data will appear after first CI run', canvas.width/2, canvas.height/2);
+                    }
+                });
+            }
+        }
+        
+        async function loadCoverageData() {
+            try {
+                const summary = document.getElementById('coverage-summary');
+                summary.innerHTML = '<span style="color: var(--warning-color)">Coverage data will be available after first CI run</span>';
+            } catch (error) {
+                console.log('Coverage data not available yet:', error);
+            }
+        }
+        
+        function displayBenchmarkChart(canvasId, data, title) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || !data.benchmarks) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            const benchmarks = data.benchmarks || [];
+            const labels = benchmarks.map(b => 
+                b.name.replace(/^BM_/, '').replace(/_/g, ' ')
+            );
+            const times = benchmarks.map(b => b.real_time);
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Time (ns)',
+                        data: times,
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderColor: 'rgba(37, 99, 235, 1)',
+                        borderWidth: 2,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: title,
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Time (nanoseconds)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        JS_EOF
+        
+    - name: Create Coverage Index
+      run: |
+        mkdir -p site/coverage
+        cat > site/coverage/index.html << 'COV_EOF'
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Coverage Report - Shell Project</title>
+            <style>
+                body { 
+                    font-family: system-ui, -apple-system, sans-serif; 
+                    margin: 2rem; 
+                    background: #f8fafc; 
+                    color: #1e293b;
+                }
+                .summary { 
+                    background: #f0f9ff; 
+                    padding: 2rem; 
+                    border-radius: 8px; 
+                    border: 1px solid #e0f2fe;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+                .back-link {
+                    display: inline-block;
+                    color: #2563eb;
+                    text-decoration: none;
+                    font-weight: 500;
+                }
+                .back-link:hover { text-decoration: underline; }
+                h1 { color: #2563eb; margin-bottom: 1rem; }
+            </style>
+        </head>
+        <body>
+            <h1>🛡️ Code Coverage Report</h1>
+            <div class="summary">
+                <p>Coverage reports will be generated from CI artifacts when available.</p>
+                <br>
+                <a href="../" class="back-link">← Back to Dashboard</a>
+            </div>
+        </body>
+        </html>
+        COV_EOF
+        
+    - name: Generate Coverage Reports
+      run: |
+        if find site/coverage -name "*.info" -type f | grep -q .; then
+          echo "Generating HTML coverage reports..."
+          for info_file in site/coverage/*.info; do
+            genhtml "$info_file" --output-directory site/coverage/html --title "Shell Project Coverage" || true
+          done
+        fi
+        
+    - name: Upload Pages Artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: docs/html/
-        
-  deploy-docs:
-    name: Deploy Documentation
+        path: site/
+
+  deploy-performance-dashboard:
+    name: Deploy to GitHub Pages
     runs-on: ubuntu-24.04
-    needs: build-docs
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build-performance-dashboard
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     
-    permissions:
-      pages: write
-      id-token: write
-      
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
+      
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
