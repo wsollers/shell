@@ -1,14 +1,15 @@
+---
 name: Documentation and Performance Dashboard
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_run:
     workflows: ["CI"]
     types: [completed]
-    branches: [ main, master ]
+    branches: [main, master]
 
 permissions:
   contents: read
@@ -25,49 +26,49 @@ jobs:
     name: Build Performance Dashboard
     runs-on: ubuntu-24.04
     if: github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y doxygen graphviz clang-18 libc++-18-dev cmake
         pip install matplotlib seaborn pandas jinja2
-        
+
     - name: Generate API Documentation
       run: doxygen Doxyfile
-        
+
     - name: Download CI Artifacts
       uses: actions/download-artifact@v4
       with:
         pattern: '*'
         path: artifacts/
       continue-on-error: true
-        
+
     - name: Create Site Structure
       run: |
         mkdir -p site/{css,js,data,coverage,benchmarks,docs}
         # Copy Doxygen docs if available
-        if [ -d "docs/html" ]; then
+        if [-d "docs/html"]; then
           cp -r docs/html/* site/docs/
         fi
-        
+
         # Process CI artifacts
-        if [ -d "artifacts" ]; then
+        if [-d "artifacts"]; then
           echo "Processing CI artifacts..."
           find artifacts -name "*.json" -exec cp {} site/data/ \; || true
           find artifacts -name "coverage*.info" -exec cp {} site/coverage/ \; || true
           find artifacts -name "*.profraw" -exec cp {} site/data/ \; || true
           find artifacts -name "*.xml" -exec cp {} site/coverage/ \; || true
         fi
-        
+
     - name: Create Dashboard HTML
       run: |
         cat > site/index.html << 'HTML_EOF'
@@ -147,7 +148,7 @@ jobs:
         </body>
         </html>
         HTML_EOF
-        
+
     - name: Create Dashboard CSS
       run: |
         cat > site/css/dashboard.css << 'CSS_EOF'
@@ -161,20 +162,20 @@ jobs:
             --text-secondary: #64748b;
             --border: #e2e8f0;
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             background: var(--background);
             color: var(--text-primary);
             line-height: 1.6;
         }
-        
+
         header {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
@@ -184,13 +185,13 @@ jobs:
             top: 0;
             z-index: 100;
         }
-        
+
         header h1 {
             color: var(--primary-color);
             margin-bottom: 0.5rem;
             font-size: 1.5rem;
         }
-        
+
         nav a {
             color: var(--text-secondary);
             text-decoration: none;
@@ -198,17 +199,17 @@ jobs:
             font-weight: 500;
             transition: color 0.2s;
         }
-        
+
         nav a:hover {
             color: var(--primary-color);
         }
-        
+
         main {
             max-width: 1200px;
             margin: 0 auto;
             padding: 2rem;
         }
-        
+
         section {
             background: var(--surface);
             border-radius: 8px;
@@ -216,14 +217,14 @@ jobs:
             margin-bottom: 2rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-        
+
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1rem;
             margin-top: 1rem;
         }
-        
+
         .metric-card {
             background: var(--background);
             padding: 1.5rem;
@@ -231,7 +232,7 @@ jobs:
             border: 1px solid var(--border);
             text-align: center;
         }
-        
+
         .metric-card h3 {
             color: var(--text-secondary);
             font-size: 0.9rem;
@@ -239,22 +240,22 @@ jobs:
             letter-spacing: 0.05em;
             margin-bottom: 0.5rem;
         }
-        
+
         .metric-card div {
             font-size: 1.5rem;
             font-weight: 600;
             color: var(--text-primary);
         }
-        
+
         .benchmark-section, .coverage-section {
             margin-top: 2rem;
         }
-        
+
         .benchmark-section canvas {
             margin-top: 1rem;
             max-height: 400px;
         }
-        
+
         .docs-link {
             display: inline-block;
             background: var(--primary-color);
@@ -265,56 +266,56 @@ jobs:
             font-weight: 500;
             transition: background 0.2s;
         }
-        
+
         .docs-link:hover {
             background: #1d4ed8;
         }
-        
+
         footer {
             text-align: center;
             padding: 2rem;
             color: var(--text-secondary);
             font-size: 0.9rem;
         }
-        
+
         footer a {
             color: var(--primary-color);
             text-decoration: none;
         }
-        
+
         @media (max-width: 768px) {
             main {
                 padding: 1rem;
             }
-            
+
             header {
                 padding: 1rem;
             }
-            
+
             nav a {
                 display: block;
                 margin: 0.5rem 0;
             }
-            
+
             .metrics-grid {
                 grid-template-columns: 1fr;
             }
         }
         CSS_EOF
-        
+
     - name: Create Dashboard JavaScript
       run: |
         cat > site/js/dashboard.js << 'JS_EOF'
         document.addEventListener('DOMContentLoaded', function() {
             initializeDashboard();
         });
-        
+
         async function initializeDashboard() {
             document.getElementById('last-update').textContent = new Date().toLocaleString();
             await loadBenchmarkData();
             await loadCoverageData();
         }
-        
+
         async function loadBenchmarkData() {
             try {
                 const parserResponse = await fetch('data/command_parser_bench.json');
@@ -322,7 +323,7 @@ jobs:
                     const parserData = await parserResponse.json();
                     displayBenchmarkChart('parser-chart', parserData, 'Command Parser Performance');
                 }
-                
+
                 const shellResponse = await fetch('data/shell_core_bench.json');
                 if (shellResponse.ok) {
                     const shellData = await shellResponse.json();
@@ -343,7 +344,7 @@ jobs:
                 });
             }
         }
-        
+
         async function loadCoverageData() {
             try {
                 const summary = document.getElementById('coverage-summary');
@@ -352,19 +353,19 @@ jobs:
                 console.log('Coverage data not available yet:', error);
             }
         }
-        
+
         function displayBenchmarkChart(canvasId, data, title) {
             const canvas = document.getElementById(canvasId);
             if (!canvas || !data.benchmarks) return;
-            
+
             const ctx = canvas.getContext('2d');
-            
+
             const benchmarks = data.benchmarks || [];
-            const labels = benchmarks.map(b => 
+            const labels = benchmarks.map(b =>
                 b.name.replace(/^BM_/, '').replace(/_/g, ' ')
             );
             const times = benchmarks.map(b => b.real_time);
-            
+
             new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -415,7 +416,7 @@ jobs:
             });
         }
         JS_EOF
-        
+
     - name: Create Coverage Index
       run: |
         mkdir -p site/coverage
@@ -427,16 +428,16 @@ jobs:
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Coverage Report - Shell Project</title>
             <style>
-                body { 
-                    font-family: system-ui, -apple-system, sans-serif; 
-                    margin: 2rem; 
-                    background: #f8fafc; 
+                body {
+                    font-family: system-ui, -apple-system, sans-serif;
+                    margin: 2rem;
+                    background: #f8fafc;
                     color: #1e293b;
                 }
-                .summary { 
-                    background: #f0f9ff; 
-                    padding: 2rem; 
-                    border-radius: 8px; 
+                .summary {
+                    background: #f0f9ff;
+                    padding: 2rem;
+                    border-radius: 8px;
                     border: 1px solid #e0f2fe;
                     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
@@ -460,7 +461,7 @@ jobs:
         </body>
         </html>
         COV_EOF
-        
+
     - name: Generate Coverage Reports
       run: |
         if find site/coverage -name "*.info" -type f | grep -q .; then
@@ -469,7 +470,7 @@ jobs:
             genhtml "$info_file" --output-directory site/coverage/html --title "Shell Project Coverage" || true
           done
         fi
-        
+
     - name: Upload Pages Artifact
       uses: actions/upload-pages-artifact@v3
       with:
@@ -480,11 +481,11 @@ jobs:
     runs-on: ubuntu-24.04
     needs: build-performance-dashboard
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-      
+
     steps:
     - name: Deploy to GitHub Pages
       id: deployment

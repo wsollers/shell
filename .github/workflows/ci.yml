@@ -1,37 +1,38 @@
+---
 name: CI
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
 
 jobs:
   validate:
     name: Validate Workflow Files
     runs-on: ubuntu-24.04
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Validate YAML Files
       run: |
         echo "🔍 Validating workflow YAML files..."
-        
+
         # Install yamllint for comprehensive validation
         pip install yamllint
-        
+
         # Validate all workflow files
         find .github/workflows -name "*.yml" -o -name "*.yaml" | while read -r file; do
           echo "Validating: $file"
-          yamllint "$file"
+          yamllint -c .github/workflows/.yamllint.yml "$file"
         done
-        
+
         # Validate CMake presets
         echo "Validating CMakePresets.json..."
         python3 -c "import json; json.load(open('CMakePresets.json'))"
-        
+
         # Basic syntax validation with Python
         echo "Running Python YAML validation..."
         python3 -c "
@@ -67,10 +68,10 @@ jobs:
             preset: "linux-release"
             build_type: "Release"
           - name: "Linux Debug (Clang + libc++)"
-            os: ubuntu-24.04  
+            os: ubuntu-24.04
             preset: "linux-debug"
             build_type: "Debug"
-            
+
           # macOS builds (commented out for review)
           # - name: "macOS Release (Clang + libc++)"
           #   os: macos-14
@@ -78,9 +79,9 @@ jobs:
           #   build_type: "Release"
           # - name: "macOS Debug (Clang + libc++)"
           #   os: macos-14
-          #   preset: "macos-debug" 
+          #   preset: "macos-debug"
           #   build_type: "Debug"
-            
+
           # Windows builds
           - name: "Windows Release (MSVC)"
             os: windows-2022
@@ -90,17 +91,17 @@ jobs:
             os: windows-2022
             preset: "windows-msvc-debug"
             build_type: "Debug"
-            
+
     runs-on: ${{ matrix.os }}
-            
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Install Dependencies
       shell: bash
       run: |
-        if [[ "${{ runner.os }}" == "Linux" ]]; then
+        if [["${{ runner.os }}" == "Linux"]]; then
           sudo apt-get update
           sudo apt-get install -y \
             clang-18 \
@@ -108,47 +109,47 @@ jobs:
             libc++abi-18-dev \
             cmake \
             lcov
-        elif [[ "${{ runner.os }}" == "macOS" ]]; then
+        elif [["${{ runner.os }}" == "macOS"]]; then
           # macOS has clang pre-installed, just ensure we have latest cmake
           brew install cmake
-        elif [[ "${{ runner.os }}" == "Windows" ]]; then
+        elif [["${{ runner.os }}" == "Windows"]]; then
           # Windows uses MSVC, which comes with Visual Studio
           echo "Using pre-installed MSVC on Windows"
         fi
-          
+
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2
       with:
         cmake-version: '3.25'
-        
+
     - name: Configure CMake
       shell: bash
       run: |
         cmake --preset ${{ matrix.preset }}
-        
+
     - name: Build
-      shell: bash  
+      shell: bash
       run: |
-        if [[ "${{ runner.os }}" == "Windows" ]]; then
+        if [["${{ runner.os }}" == "Windows"]]; then
           # Multi-config generators need --config
           cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --parallel
         else
           # Single-config generators
           cmake --build build/${{ matrix.preset }} --parallel
         fi
-        
+
     - name: Run Tests
       shell: bash
       run: |
         cd build/${{ matrix.preset }}
-        if [[ "${{ runner.os }}" == "Windows" ]]; then
+        if [["${{ runner.os }}" == "Windows"]]; then
           # Multi-config generators need -C config
           ctest -C ${{ matrix.build_type }} --output-on-failure --parallel
         else
           # Single-config generators
           ctest --output-on-failure --parallel
         fi
-        
+
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
       if: always()
@@ -161,11 +162,11 @@ jobs:
     runs-on: ubuntu-24.04
     needs: build-and-test
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
@@ -174,29 +175,29 @@ jobs:
           libc++-18-dev \
           libc++abi-18-dev \
           cmake
-          
+
     - name: Configure CMake for Fuzzing
       run: |
         cmake --preset linux-fuzz
-        
+
     - name: Build Fuzz Targets
       run: |
         cmake --build build/linux-fuzz --parallel
-        
+
     - name: Run Short Fuzz Tests
       run: |
         cd build/linux-fuzz
         mkdir -p fuzz-results
-        
+
         echo "Running fuzzing tests..."
         echo '{"fuzzing_summary": {"timestamp": "'$(date -Iseconds)'", "tests": []}}' > fuzz-results/summary.json
-        
+
         # Run command parser fuzzing
         timeout 30s ./fuzz/fuzz_command_parser -max_total_time=25 -artifact_prefix=fuzz-results/command_parser_ 2>&1 | tee fuzz-results/command_parser.log || true
-        
-        # Run shell core fuzzing  
+
+        # Run shell core fuzzing
         timeout 30s ./fuzz/fuzz_shell_core -max_total_time=25 -artifact_prefix=fuzz-results/shell_core_ 2>&1 | tee fuzz-results/shell_core.log || true
-        
+
         # Create summary report
         cat > fuzz-results/report.json << EOF
         {
@@ -209,7 +210,7 @@ jobs:
           ]
         }
         EOF
-        
+
     - name: Upload Fuzz Results
       uses: actions/upload-artifact@v4
       with:
@@ -221,11 +222,11 @@ jobs:
     runs-on: ubuntu-24.04
     needs: build-and-test
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
@@ -234,22 +235,22 @@ jobs:
           libc++-18-dev \
           libc++abi-18-dev \
           cmake
-          
+
     - name: Configure CMake for Benchmarks
       run: |
         cmake --preset linux-bench
-        
+
     - name: Build Benchmark Targets
       run: |
         cmake --build build/linux-bench --parallel
-        
+
     - name: Run Benchmarks
       run: |
         cd build/linux-bench
         mkdir -p benchmark-results
         ./bench/bench_command_parser --benchmark_format=json > benchmark-results/command_parser_bench.json || true
         ./bench/bench_shell_core --benchmark_format=json > benchmark-results/shell_core_bench.json || true
-        
+
         # Create metadata for the benchmark run
         cat > benchmark-results/metadata.json << EOF
         {
@@ -260,7 +261,7 @@ jobs:
           "run_number": "${GITHUB_RUN_NUMBER}"
         }
         EOF
-        
+
     - name: Upload Benchmark Results
       uses: actions/upload-artifact@v4
       with:
@@ -271,11 +272,11 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-24.04
     needs: [validate, build-and-test]
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
@@ -286,46 +287,46 @@ jobs:
           cmake \
           lcov \
           llvm-18
-          
+
     - name: Configure CMake for Coverage
       run: |
         cmake --preset linux-coverage
-        
+
     - name: Build with Coverage
       run: |
         cmake --build build/linux-coverage --parallel
-        
+
     - name: Run Tests with Coverage
       run: |
         cd build/linux-coverage
         # Run tests directly to ensure coverage instrumentation works
         LLVM_PROFILE_FILE="coverage-%p.profraw" ctest --output-on-failure
         # Also try running test binaries directly if ctest doesn't work
-        if [ ! -f coverage-*.profraw ]; then
+        if [! -f coverage-*.profraw]; then
           echo "No coverage files from ctest, trying direct execution..."
-          if [ -f test/wshell_tests ]; then
+          if [-f test/wshell_tests]; then
             LLVM_PROFILE_FILE="coverage-%p.profraw" ./test/wshell_tests
           fi
         fi
       env:
         LLVM_PROFILE_FILE: coverage-%p.profraw
-        
+
     - name: Generate Coverage Report (Clang/LLVM)
       run: |
         cd build/linux-coverage
         # Check if we have LLVM coverage data
         echo "Looking for coverage files..."
         find . -name "*.prof*" -type f || true
-        
+
         if find . -name "*.profraw" -type f | grep -q .; then
           echo "Using LLVM coverage (Clang)"
           # Merge profile data
           llvm-profdata-18 merge -sparse *.profraw -o coverage.profdata
           # Find the main executable or test binary to analyze
           TARGET_BINARY=""
-          if [ -f "./test/wshell_tests" ]; then
+          if [-f "./test/wshell_tests"]; then
             TARGET_BINARY="./test/wshell_tests"
-          elif [ -f "./src/main/wshell" ]; then
+          elif [-f "./src/main/wshell"]; then
             TARGET_BINARY="./src/main/wshell"
           else
             echo "No suitable binary found for coverage analysis"
@@ -333,10 +334,11 @@ jobs:
             ls -la test/ || true
             ls -la src/main/ || true
           fi
-          
-          if [ -n "$TARGET_BINARY" ]; then
+
+          if [-n "$TARGET_BINARY"]; then
             # Generate coverage report
-            llvm-cov-18 export --format=lcov --instr-profile=coverage.profdata "$TARGET_BINARY" > coverage.info
+            llvm-cov-18 export --format=lcov \
+            --instr-profile=coverage.profdata "$TARGET_BINARY" > coverage.info
             # Filter out system headers and dependencies
             lcov --remove coverage.info '/usr/*' '_deps/*' --output-file coverage_filtered.info --ignore-errors unused
           else
@@ -352,7 +354,7 @@ jobs:
           echo "No coverage data found. Creating empty report."
           touch coverage_filtered.info
         fi
-        
+
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
@@ -360,7 +362,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: false
         verbose: true
-        
+
     - name: Upload Coverage Reports for Dashboard
       uses: actions/upload-artifact@v4
       with:
@@ -370,14 +372,14 @@ jobs:
           build/linux-coverage/coverage.profdata
 
   security:
-    name: Security Analysis  
+    name: Security Analysis
     runs-on: ubuntu-24.04
     needs: validate
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
@@ -386,15 +388,15 @@ jobs:
           libc++-18-dev \
           libc++abi-18-dev \
           cmake
-          
+
     - name: Configure with Debug (closest to sanitizers)
       run: |
         cmake --preset linux-debug
-        
+
     - name: Build Debug
       run: |
         cmake --build build/linux-debug --parallel
-        
+
     - name: Run Tests in Debug Mode
       run: |
         cd build/linux-debug

@@ -1,10 +1,11 @@
+---
 name: Security
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   schedule:
     # Run weekly security scans
     - cron: '0 2 * * 1'
@@ -17,27 +18,27 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    
+
     strategy:
       matrix:
-        language: [ 'cpp' ]
-    
+        language: ['cpp']
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
         languages: ${{ matrix.language }}
         config-file: ./.github/codeql/codeql-config.yml
-        
+
     - name: Clean Build Directory
       run: |
         # Remove any existing build directories that might confuse CodeQL
         rm -rf build/
         rm -rf _deps/
-        
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
@@ -46,12 +47,12 @@ jobs:
           libc++-18-dev \
           libc++abi-18-dev \
           cmake
-    
+
     - name: Build for Analysis
       run: |
         cmake --preset linux-release
         cmake --build build/linux-release --parallel
-    
+
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
 
@@ -59,22 +60,22 @@ jobs:
     name: Dependency Review
     runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Dependency Review
       uses: actions/dependency-review-action@v4
 
   vulnerability-scan:
     name: Vulnerability Scanning
     runs-on: ubuntu-24.04
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@0.28.0
       with:
@@ -82,7 +83,7 @@ jobs:
         format: 'sarif'
         output: 'trivy-results.sarif'
         skip-dirs: 'build/**/_deps/**,**/build/**/_deps/**,_deps/**,**/_deps/**'
-        
+
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v4
       if: always()
@@ -96,11 +97,11 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Run DevSkim scanner
       uses: microsoft/DevSkim-Action@v1
       with:
@@ -109,7 +110,7 @@ jobs:
           **/build/**/_deps/**
           _deps/**
           **/_deps/**
-      
+
     - name: Upload DevSkim scan results
       uses: github/codeql-action/upload-sarif@v4
       if: always() && hashFiles('devskim-results.sarif') != ''
@@ -123,20 +124,20 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2
       with:
         cmake-version: '3.25'
-        
+
     - name: Configure CMake
       run: |
         cmake --preset windows-msvc-release
-        
+
     - name: Run Microsoft C++ Code Analysis
       uses: microsoft/msvc-code-analysis-action@v0.1.1
       id: run-analysis
@@ -149,7 +150,7 @@ jobs:
           **/build/**/_deps/**
           _deps/**
           **/_deps/**
-        
+
     - name: Upload SARIF to GitHub
       uses: github/codeql-action/upload-sarif@v4
       if: always() && steps.run-analysis.outputs.sarif != ''
@@ -163,17 +164,17 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
       continue-on-error: true
-      
+
     - name: Run Microsoft Security DevOps
       uses: microsoft/security-devops-action@v1.6.0
       id: msdo
@@ -183,7 +184,7 @@ jobs:
             "globalOptions": {
               "exclude": [
                 "build/**/_deps/**",
-                "**/build/**/_deps/**", 
+                "**/build/**/_deps/**",
                 "_deps/**",
                 "**/_deps/**"
               ]
@@ -205,23 +206,23 @@ jobs:
       #       "globalOptions": {
       #         "exclude": [
       #           "build/**/_deps/**",
-      #           "**/build/**/_deps/**", 
+      #           "**/build/**/_deps/**",
       #           "_deps/**",
       #           "**/_deps/**"
       #         ]
       #       }
       #     }
-        
+
     - name: Upload alerts to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v4
       if: always() && steps.msdo.outputs.sarifFile != ''
       with:
         sarif_file: ${{ steps.msdo.outputs.sarifFile }}
-        
+
     - name: Upload to Azure Defender for Cloud (if Azure credentials available)
       if: success()
       run: |
-        if [ -n "$AZURE_CREDENTIALS" ]; then
+        if [-n "$AZURE_CREDENTIALS"]; then
           echo "Defender for DevOps results are also being sent to Azure Security Center"
           echo "Check your Azure portal at: https://portal.azure.com/#view/Microsoft_Azure_Security/SecurityMenuBlade/~/0"
         else
@@ -233,11 +234,11 @@ jobs:
   script-analysis:
     name: Script Security Analysis
     runs-on: ubuntu-24.04
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Install PowerShell
       run: |
         sudo apt-get update
@@ -246,12 +247,12 @@ jobs:
         sudo dpkg -i packages-microsoft-prod.deb
         sudo apt-get update
         sudo apt-get install -y powershell
-        
+
     - name: Install PSScriptAnalyzer
       shell: pwsh
       run: |
         Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
-        
+
     - name: Run PSScriptAnalyzer on PowerShell scripts
       shell: pwsh
       run: |
@@ -266,11 +267,11 @@ jobs:
         } else {
           Write-Host "No PSScriptAnalyzer issues found"
         }
-        
+
     - name: Install ShellCheck for Bash analysis
       run: |
         sudo apt-get install -y shellcheck
-        
+
     - name: Run ShellCheck on Bash scripts
       run: |
         echo "Running ShellCheck on Bash scripts..."

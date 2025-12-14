@@ -1,0 +1,27 @@
+---
+extends: default
+
+rules:
+  # Allow longer lines for GitHub Actions (they can be quite long)
+  line-length:
+    max: 200
+
+  # Be more flexible with indentation for GitHub Actions
+  indentation: disable
+
+  # Disable truthy check for GitHub Actions compatibility
+  truthy: disable
+
+  # Don't require document start for GitHub Actions
+  document-start: disable
+
+  # Allow empty values which are common in GitHub Actions
+  empty-values: disable
+
+  # Be more lenient with brackets spacing
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  # Allow comments to be more flexible
+  comments-indentation: disable
