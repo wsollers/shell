@@ -115,7 +115,7 @@ generate_benchmark_flamegraph() {
     # Record performance data
     log "Recording perf data for $benchmark_name (this may take a few seconds)..."
     if ! perf record -F 997 -g --call-graph=fp -o "$perf_data" -- \
-        "$benchmark_path" --benchmark_repetitions=3 --benchmark_min_time=1.0; then
+        "$benchmark_path" --benchmark_repetitions=3 --benchmark_min_time=1.0s; then
         error "perf record failed for $benchmark_name"
         error "Check that perf is installed and has proper permissions"
         return 1
