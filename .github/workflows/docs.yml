@@ -54,14 +54,15 @@ jobs:
 
     - name: Create Site Structure
       run: |
-        mkdir -p site/{css,js,data,coverage,benchmarks,docs}
-        # Copy Doxygen docs if available
-        if [-d "docs/html"]; then
+        mkdir -p site/{css,js,data,coverage,benchmarks,docs,html}
+        # Copy Doxygen docs if available (to both locations for compatibility)
+        if [[ -d "docs/html" ]]; then
           cp -r docs/html/* site/docs/
+          cp -r docs/html/* site/html/  # For backward compatibility with existing URLs
         fi
 
         # Process CI artifacts
-        if [-d "artifacts"]; then
+        if [[ -d "artifacts" ]]; then
           echo "Processing CI artifacts..."
           find artifacts -name "*.json" -exec cp {} site/data/ \; || true
           find artifacts -name "coverage*.info" -exec cp {} site/coverage/ \; || true
