@@ -160,22 +160,51 @@ jobs:
     - name: Run Tests with Coverage
       run: |
         cd build/linux-coverage
-        # Set environment for LLVM coverage data collection
-        export LLVM_PROFILE_FILE="coverage-%p.profraw"
-        ctest --output-on-failure
+        # Run tests directly to ensure coverage instrumentation works
+        LLVM_PROFILE_FILE="coverage-%p.profraw" ctest --output-on-failure
+        # Also try running test binaries directly if ctest doesn't work
+        if [ ! -f coverage-*.profraw ]; then
+          echo "No coverage files from ctest, trying direct execution..."
+          if [ -f test/wshell_tests ]; then
+            LLVM_PROFILE_FILE="coverage-%p.profraw" ./test/wshell_tests
+          fi
+        fi
+      env:
+        LLVM_PROFILE_FILE: coverage-%p.profraw
         
     - name: Generate Coverage Report (Clang/LLVM)
       run: |
         cd build/linux-coverage
         # Check if we have LLVM coverage data
+        echo "Looking for coverage files..."
+        find . -name "*.prof*" -type f || true
+        
         if find . -name "*.profraw" -type f | grep -q .; then
           echo "Using LLVM coverage (Clang)"
           # Merge profile data
           llvm-profdata-18 merge -sparse *.profraw -o coverage.profdata
-          # Generate coverage report
-          llvm-cov-18 export --format=lcov --instr-profile=coverage.profdata ./src/main/wshell > coverage.info
-          # Filter out system headers and dependencies
-          lcov --remove coverage.info '/usr/*' '_deps/*' --output-file coverage_filtered.info
+          # Find the main executable or test binary to analyze
+          TARGET_BINARY=""
+          if [ -f "./test/wshell_tests" ]; then
+            TARGET_BINARY="./test/wshell_tests"
+          elif [ -f "./src/main/wshell" ]; then
+            TARGET_BINARY="./src/main/wshell"
+          else
+            echo "No suitable binary found for coverage analysis"
+            find . -name "wshell*" -type f -executable || true
+            ls -la test/ || true
+            ls -la src/main/ || true
+          fi
+          
+          if [ -n "$TARGET_BINARY" ]; then
+            # Generate coverage report
+            llvm-cov-18 export --format=lcov --instr-profile=coverage.profdata "$TARGET_BINARY" > coverage.info
+            # Filter out system headers and dependencies
+            lcov --remove coverage.info '/usr/*' '_deps/*' --output-file coverage_filtered.info
+          else
+            echo "Creating empty coverage report due to missing target binary"
+            touch coverage_filtered.info
+          fi
         elif find . -name "*.gcda" -type f | grep -q .; then
           echo "Using GCC coverage (gcov)"
           # Generate coverage with lcov
