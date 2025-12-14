@@ -11,70 +11,70 @@ on:
 
 jobs:
   fuzz:
-    name: Fuzz Testing
+    name: Fuzz Testing (${{ matrix.target }})
     runs-on: ubuntu-latest
+
     strategy:
+      fail-fast: false
       matrix:
         target: [fuzz_command_parser, fuzz_shell_core]
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Clang with libFuzzer
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang llvm g++
-    
-    - name: Configure with fuzzing
-      run: |
-        chmod +x scripts/*.sh
-        # Use libc++ with Clang's built-in libFuzzer support
-        cmake -S . -B build \
-          -DCMAKE_CXX_COMPILER=clang++ \
-          -DCMAKE_C_COMPILER=clang \
-          -DCMAKE_CXX_FLAGS="-stdlib=libc++ -fPIC" \
-          -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -lc++abi" \
-          -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -lc++abi" \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DENABLE_TESTING=OFF \
-          -DENABLE_FUZZING=ON \
-          -DENABLE_BENCHMARKS=OFF \
-          -DENABLE_COVERAGE=OFF \
-          -DENABLE_SANITIZERS=OFF
-    
-    - name: Build
-      run: cmake --build build --parallel $(nproc)
-    
-    - name: Download previous corpus
-      uses: actions/cache@v4
-      with:
-        path: fuzz_corpus
-        key: fuzz-corpus-${{ matrix.target }}-${{ github.sha }}
-        restore-keys: |
-          fuzz-corpus-${{ matrix.target }}-
-    
-    - name: Run fuzz test
-      run: |
-        mkdir -p fuzz_corpus/${{ matrix.target }}
-        timeout 300 ./build/fuzz/${{ matrix.target }} \
-          fuzz_corpus/${{ matrix.target }} \
-          -max_total_time=300 \
-          -print_final_stats=1 || true
-    
-    - name: Upload crashes
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: fuzz-crashes-${{ matrix.target }}
-        path: |
-          crash-*
-          leak-*
-          timeout-*
-      continue-on-error: true
-    
-    - name: Check for crashes
-      run: |
-        if ls crash-* leak-* timeout-* 2>/dev/null; then
-          echo "::error::Fuzzing found crashes or leaks!"
-          exit 1
-        fi
-      continue-on-error: true
+      - uses: actions/checkout@v4
+
+      - name: Install Clang/LLVM + build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm lld make ninja-build g++
+
+      # Configure fuzzing with Clang, using the system default C++ stdlib (libstdc++).
+      # This avoids libc++/libc++abi packaging issues and matches the libFuzzer runtime.
+      - name: Configure with fuzzing
+        run: |
+          chmod +x scripts/*.sh
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DENABLE_TESTING=OFF \
+            -DENABLE_FUZZING=ON \
+            -DENABLE_BENCHMARKS=OFF \
+            -DENABLE_COVERAGE=OFF \
+            -DENABLE_SANITIZERS=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      # Cache per-target corpus across runs
+      - name: Restore corpus
+        uses: actions/cache@v4
+        with:
+          path: fuzz_corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.ref_name }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.target }}-
+
+      - name: Run fuzz test
+        run: |
+          set -euxo pipefail
+          mkdir -p fuzz_corpus/${{ matrix.target }}
+          # Use timeout so CI doesn’t hang; don’t "|| true" because we want real failures.
+          timeout 300s ./build/fuzz/${{ matrix.target }} \
+            fuzz_corpus/${{ matrix.target }} \
+            -max_total_time=300 \
+            -print_final_stats=1 \
+            -artifact_prefix=./
+
+      - name: Upload artifacts (crashes/leaks/timeouts)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fuzz-artifacts-${{ matrix.target }}
+          path: |
+            crash-*
+            leak-*
+            timeout-*
+            artifact-*
+            fuzz_corpus/${{ matrix.target }}
+          if-no-files-found: ignore
