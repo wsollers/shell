@@ -58,6 +58,16 @@
       "cacheVariables": { "ENABLE_BENCHMARKS": "ON" }
     },
     {
+      "name": "linux-flamegraph",
+      "displayName": "Linux Flame Graph Profiling (Clang + libc++)",
+      "inherits": "linux-release",
+      "binaryDir": "${sourceDir}/build/linux-flamegraph",
+      "cacheVariables": { 
+        "ENABLE_BENCHMARKS": "ON",
+        "ENABLE_FLAME_GRAPHS": "ON"
+      }
+    },
+    {
       "name": "linux-coverage",
       "displayName": "Linux Coverage (Clang + llvm-cov)",
       "inherits": "linux-debug",
@@ -116,6 +126,7 @@
     { "name": "linux-debug", "configurePreset": "linux-debug" },
     { "name": "linux-fuzz", "configurePreset": "linux-fuzz" },
     { "name": "linux-bench", "configurePreset": "linux-bench" },
+    { "name": "linux-flamegraph", "configurePreset": "linux-flamegraph" },
     { "name": "linux-coverage", "configurePreset": "linux-coverage" },
     { "name": "macos-release", "configurePreset": "macos-release" },
     { "name": "macos-debug", "configurePreset": "macos-debug" },

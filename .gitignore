@@ -38,4 +38,12 @@ fuzz_corpus/
 crash-*
 leak-*
 
+# Benchmarks and profiling
 benchmark_results/
+flamegraphs/
+*.svg
+*.folded
+perf.data*
+
+# Third party tools
+third_party/

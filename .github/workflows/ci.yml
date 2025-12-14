@@ -418,3 +418,52 @@ jobs:
       run: |
         cd build/linux-debug
         ctest --output-on-failure
+
+  flame-graph-generation:
+    name: Generate Flame Graphs
+    runs-on: ubuntu-24.04
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'  # Only on main branch pushes
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-18 \
+          libc++-18-dev \
+          libc++abi-18-dev \
+          cmake \
+          linux-tools-generic \
+          linux-tools-common
+
+    - name: Configure perf permissions
+      run: |
+        # Allow perf profiling for non-root users in CI
+        echo 1 | sudo tee /proc/sys/kernel/perf_event_paranoid
+        echo 0 | sudo tee /proc/sys/kernel/kptr_restrict
+
+    - name: Configure CMake for Flame Graph Profiling
+      run: |
+        cmake --preset linux-flamegraph
+
+    - name: Build with Profiling Support
+      run: |
+        cmake --build --preset linux-flamegraph --parallel
+
+    - name: Generate Flame Graphs
+      run: |
+        ./scripts/generate-flamegraphs.sh
+
+    - name: Upload Flame Graph Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: flame-graphs
+        path: |
+          flamegraphs/*.svg
+          flamegraphs/*.json
+          flamegraphs/index.html
+        retention-days: 30

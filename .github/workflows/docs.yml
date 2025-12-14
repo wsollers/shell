@@ -54,7 +54,7 @@ jobs:
 
     - name: Create Site Structure
       run: |
-        mkdir -p site/{css,js,data,coverage,benchmarks,docs,html}
+        mkdir -p site/{css,js,data,coverage,benchmarks,docs,html,flamegraphs}
         # Copy Doxygen docs if available (to both locations for compatibility)
         if [[ -d "docs/html" ]]; then
           cp -r docs/html/* site/docs/
@@ -68,6 +68,12 @@ jobs:
           find artifacts -name "coverage*.info" -exec cp {} site/coverage/ \; || true
           find artifacts -name "*.profraw" -exec cp {} site/data/ \; || true
           find artifacts -name "*.xml" -exec cp {} site/coverage/ \; || true
+          
+          # Copy flame graph artifacts
+          if [[ -d "artifacts/flame-graphs" ]]; then
+            echo "Processing flame graph artifacts..."
+            cp -r artifacts/flame-graphs/* site/flamegraphs/ 2>/dev/null || true
+          fi
         fi
 
     - name: Create Dashboard HTML
@@ -123,6 +129,13 @@ jobs:
                     <div class="benchmark-section">
                         <h3>Shell Core Performance</h3>
                         <canvas id="shell-chart" width="800" height="400"></canvas>
+                    </div>
+                </section>
+                <section id="flamegraphs">
+                    <h2>🔥 Flame Graphs</h2>
+                    <div class="flamegraph-section">
+                        <p>Interactive performance profiling visualizations showing CPU usage patterns.</p>
+                        <a href="flamegraphs/" target="_blank" class="docs-link">View Flame Graph Analysis</a>
                     </div>
                 </section>
                 <section id="coverage">
@@ -248,13 +261,20 @@ jobs:
             color: var(--text-primary);
         }
 
-        .benchmark-section, .coverage-section {
+        .benchmark-section, .coverage-section, .flamegraph-section {
             margin-top: 2rem;
         }
 
         .benchmark-section canvas {
             margin-top: 1rem;
             max-height: 400px;
+        }
+
+        .flamegraph-section {
+            padding: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
         }
 
         .docs-link {
