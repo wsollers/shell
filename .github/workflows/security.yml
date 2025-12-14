@@ -10,6 +10,11 @@ on:
     # Run weekly security scans
     - cron: '0 2 * * 1'
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   codeql:
     name: CodeQL Analysis
@@ -71,6 +76,10 @@ jobs:
   vulnerability-scan:
     name: Vulnerability Scanning
     runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
     steps:
     - name: Checkout
@@ -86,7 +95,7 @@ jobs:
 
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v4
-      if: always()
+      if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       with:
         sarif_file: 'trivy-results.sarif'
 
@@ -113,7 +122,7 @@ jobs:
 
     - name: Upload DevSkim scan results
       uses: github/codeql-action/upload-sarif@v4
-      if: always() && hashFiles('devskim-results.sarif') != ''
+      if: always() && hashFiles('devskim-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       with:
         sarif_file: devskim-results.sarif
 
@@ -153,7 +162,7 @@ jobs:
 
     - name: Upload SARIF to GitHub
       uses: github/codeql-action/upload-sarif@v4
-      if: always() && steps.run-analysis.outputs.sarif != ''
+      if: always() && steps.run-analysis.outputs.sarif != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       with:
         sarif_file: ${{ steps.run-analysis.outputs.sarif }}
 
@@ -215,7 +224,7 @@ jobs:
 
     - name: Upload alerts to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v4
-      if: always() && steps.msdo.outputs.sarifFile != ''
+      if: always() && steps.msdo.outputs.sarifFile != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       with:
         sarif_file: ${{ steps.msdo.outputs.sarifFile }}
 
