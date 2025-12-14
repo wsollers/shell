@@ -114,12 +114,12 @@ generate_benchmark_flamegraph() {
     
     # Record performance data
     log "Recording perf data for $benchmark_name (this may take a few seconds)..."
-    perf record -F 997 -g --call-graph=fp -o "$perf_data" -- \
-        "$benchmark_path" --benchmark_repetitions=3 --benchmark_min_time=1.0 \
-        2>/dev/null || {
+    if ! perf record -F 997 -g --call-graph=fp -o "$perf_data" -- \
+        "$benchmark_path" --benchmark_repetitions=3 --benchmark_min_time=1.0; then
         error "perf record failed for $benchmark_name"
+        error "Check that perf is installed and has proper permissions"
         return 1
-    }
+    fi
     
     # Convert perf data to folded format
     log "Processing perf data..."
@@ -185,15 +185,27 @@ main() {
     
     # Find benchmark executables
     local benchmarks=()
+    
+    # Check for command_parser benchmark
     if [[ -x "$BUILD_DIR/bench/bench_command_parser" ]]; then
         benchmarks+=("command_parser:$BUILD_DIR/bench/bench_command_parser")
+        log "Found command_parser benchmark: $BUILD_DIR/bench/bench_command_parser"
+    else
+        warn "command_parser benchmark not found at $BUILD_DIR/bench/bench_command_parser"
     fi
+    
+    # Check for shell_core benchmark  
     if [[ -x "$BUILD_DIR/bench/bench_shell_core" ]]; then
         benchmarks+=("shell_core:$BUILD_DIR/bench/bench_shell_core")
+        log "Found shell_core benchmark: $BUILD_DIR/bench/bench_shell_core"
+    else
+        warn "shell_core benchmark not found at $BUILD_DIR/bench/bench_shell_core"
     fi
     
     if [[ ${#benchmarks[@]} -eq 0 ]]; then
         error "No benchmark executables found in $BUILD_DIR/bench/"
+        error "Available files in $BUILD_DIR/bench/:"
+        ls -la "$BUILD_DIR/bench/" || true
         error "Build benchmarks first: cmake --build --preset linux-flamegraph"
         exit 1
     fi

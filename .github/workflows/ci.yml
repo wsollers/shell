@@ -453,6 +453,8 @@ jobs:
     - name: Build with Profiling Support
       run: |
         cmake --build --preset linux-flamegraph --parallel
+        # Ensure benchmark executables are built
+        cmake --build build/linux-flamegraph --target bench_command_parser bench_shell_core
 
     - name: Generate Flame Graphs
       run: |
