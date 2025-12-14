@@ -39,20 +39,21 @@ if(NOT HAS_LIBFUZZER)
   return()
 endif()
 
-message(STATUS "Fuzzing: enabled (Clang ${CMAKE_CXX_COMPILER_VERSION}, libc++ enforced for fuzz targets)")
+message(STATUS "Fuzzing: enabled (Clang ${CMAKE_CXX_COMPILER_VERSION}, using hybrid libc++/libstdc++ approach)")
 
-# Common fuzz flags (force libc++ for fuzz targets only)
+# Hybrid approach: compile fuzzer code with libc++ (for C++23 features), 
+# but link with libstdc++ to match libFuzzer runtime
 set(WSHELL_FUZZ_COMPILE_OPTS
   -g
   -fno-omit-frame-pointer
-  -fsanitize=fuzzer,address,undefined
   -stdlib=libc++
+  -fsanitize=address,undefined
 )
 
 set(WSHELL_FUZZ_LINK_OPTS
+  -stdlib=libstdc++
+  -lc++
   -fsanitize=fuzzer,address,undefined
-  -stdlib=libc++
-  -lc++abi
 )
 
 set(WSHELL_FUZZ_ENABLED ON CACHE INTERNAL "Whether fuzz targets are enabled" FORCE)

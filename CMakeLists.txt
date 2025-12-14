@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.20)
 
 project(wshell
     VERSION 0.1.0
@@ -38,9 +38,11 @@ if(NOT MSVC AND WSHELL_FORCE_LIBCXX)
   add_link_options(-stdlib=libc++ -lc++abi)
 endif()
 
-if(ENABLE_FUZZING AND NOT MSVC)
-  set(WSHELL_FORCE_LIBCXX ON CACHE BOOL "" FORCE)
-endif()
+# Note: Fuzzing requires compatible standard library with libFuzzer runtime
+# Comment out the libc++ forcing for fuzzing to avoid linking conflicts
+# if(ENABLE_FUZZING AND NOT MSVC)
+#   set(WSHELL_FORCE_LIBCXX ON CACHE BOOL "" FORCE)
+# endif()
 
 # ============================
 # Build type
@@ -218,17 +220,39 @@ if(ENABLE_TESTING)
 endif()
 
 if(ENABLE_BENCHMARKS)
-    find_package(benchmark QUIET)
-    if(NOT benchmark_FOUND)
-        include(FetchContent)
-        FetchContent_Declare(
-            googlebenchmark
-            GIT_REPOSITORY https://github.com/google/benchmark.git
-            GIT_TAG v1.8.3
-            GIT_SHALLOW TRUE
-        )
-        set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
-        FetchContent_MakeAvailable(googlebenchmark)
+    # Always build Google Benchmark from source for libc++ compatibility
+    include(FetchContent)
+    FetchContent_Declare(
+        googlebenchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG v1.8.3
+        GIT_SHALLOW TRUE
+    )
+    
+    # Configure Google Benchmark options
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_LTO OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_WERROR OFF CACHE BOOL "" FORCE)
+    
+    FetchContent_MakeAvailable(googlebenchmark)
+    
+    # Apply libc++ to benchmark target post-build, and remove strict warning flags
+    if(TARGET benchmark AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        # Apply libc++ 
+        target_compile_options(benchmark PRIVATE -stdlib=libc++)
+        target_link_options(benchmark INTERFACE -stdlib=libc++)
+        
+        # Remove strict warning flags from benchmark target
+        get_target_property(BENCHMARK_COMPILE_OPTIONS benchmark COMPILE_OPTIONS)
+        if(BENCHMARK_COMPILE_OPTIONS)
+            # Remove problematic warning flags that cause build failures
+            list(REMOVE_ITEM BENCHMARK_COMPILE_OPTIONS "-Werror" "-Wformat-nonliteral" "-pedantic-errors")
+            set_target_properties(benchmark PROPERTIES COMPILE_OPTIONS "${BENCHMARK_COMPILE_OPTIONS}")
+        endif()
+        
+        # Add specific flags to suppress problematic warnings
+        target_compile_options(benchmark PRIVATE -Wno-format-nonliteral -Wno-error)
     endif()
 endif()
 
@@ -240,6 +264,10 @@ add_subdirectory(src/main)
 
 if(ENABLE_TESTING)
     add_subdirectory(test)
+endif()
+
+if(ENABLE_BENCHMARKS)
+    add_subdirectory(bench)
 endif()
 
 # Track whether fuzz targets were actually enabled/built by fuzz/CMakeLists.txt

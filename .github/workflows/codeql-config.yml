@@ -1,8 +1,0 @@
-paths-ignore:
-  - "build/**"
-  - "**/_deps/**"
-  - "test/**"
-  - "fuzz/**"
-
-queries:
-  - uses: security-and-quality

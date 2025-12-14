@@ -1,0 +1,134 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 20, "patch": 0 },
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "ENABLE_TESTING": "ON"
+      }
+    },
+
+    {
+      "name": "unix-clang-libcxx",
+      "displayName": "Clang + libc++ (Unix)",
+      "inherits": "base",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/unix-clang-libcxx",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-18",
+        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-libcxx.cmake",
+        "WSHELL_FORCE_LIBCXX": "ON"
+      }
+    },
+
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release (Clang + libc++)",
+      "inherits": "unix-clang-libcxx",
+      "binaryDir": "${sourceDir}/build/linux-release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug (Clang + libc++)",
+      "inherits": "unix-clang-libcxx",
+      "binaryDir": "${sourceDir}/build/linux-debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "linux-fuzz",
+      "displayName": "Linux Fuzzing (Clang18+ + libc++)",
+      "inherits": "linux-release",
+      "binaryDir": "${sourceDir}/build/linux-fuzz",
+      "cacheVariables": {
+        "ENABLE_TESTING": "OFF",
+        "ENABLE_FUZZING": "ON"
+      }
+    },
+    {
+      "name": "linux-bench",
+      "displayName": "Linux Benchmarks (Clang + libc++)",
+      "inherits": "linux-release",
+      "binaryDir": "${sourceDir}/build/linux-bench",
+      "cacheVariables": { "ENABLE_BENCHMARKS": "ON" }
+    },
+    {
+      "name": "linux-coverage",
+      "displayName": "Linux Coverage (Clang + llvm-cov)",
+      "inherits": "linux-debug",
+      "binaryDir": "${sourceDir}/build/linux-coverage",
+      "cacheVariables": { "ENABLE_COVERAGE": "ON" }
+    },
+
+    {
+      "name": "macos-release",
+      "displayName": "macOS Release (Clang + libc++)",
+      "inherits": "unix-clang-libcxx",
+      "binaryDir": "${sourceDir}/build/macos-release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "macos-debug",
+      "displayName": "macOS Debug (Clang + libc++)",
+      "inherits": "unix-clang-libcxx",
+      "binaryDir": "${sourceDir}/build/macos-debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "macos-bench",
+      "displayName": "macOS Benchmarks (Clang + libc++)",
+      "inherits": "macos-release",
+      "binaryDir": "${sourceDir}/build/macos-bench",
+      "cacheVariables": { "ENABLE_BENCHMARKS": "ON" }
+    },
+
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Windows Release (MSVC 2022)",
+      "inherits": "base",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/windows-msvc-release",
+      "architecture": { "value": "x64" },
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "displayName": "Windows Debug (MSVC 2022)",
+      "inherits": "windows-msvc-release",
+      "binaryDir": "${sourceDir}/build/windows-msvc-debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    }
+  ],
+
+  "buildPresets": [
+    { "name": "linux-release", "configurePreset": "linux-release" },
+    { "name": "linux-debug", "configurePreset": "linux-debug" },
+    { "name": "linux-fuzz", "configurePreset": "linux-fuzz" },
+    { "name": "linux-bench", "configurePreset": "linux-bench" },
+    { "name": "linux-coverage", "configurePreset": "linux-coverage" },
+    { "name": "macos-release", "configurePreset": "macos-release" },
+    { "name": "macos-debug", "configurePreset": "macos-debug" },
+    { "name": "macos-bench", "configurePreset": "macos-bench" },
+    { "name": "windows-msvc-release", "configurePreset": "windows-msvc-release", "configuration": "Release" },
+    { "name": "windows-msvc-debug", "configurePreset": "windows-msvc-debug", "configuration": "Debug" }
+  ],
+
+  "testPresets": [
+    { "name": "linux-release", "configurePreset": "linux-release" },
+    { "name": "linux-debug", "configurePreset": "linux-debug" },
+    { "name": "macos-release", "configurePreset": "macos-release" },
+    { "name": "macos-debug", "configurePreset": "macos-debug" },
+    { "name": "macos-bench", "configurePreset": "macos-bench" },
+    { "name": "windows-msvc-release", "configurePreset": "windows-msvc-release", "configuration": "Release" },
+    { "name": "windows-msvc-debug", "configurePreset": "windows-msvc-debug", "configuration": "Debug" }
+  ]
+}
+
