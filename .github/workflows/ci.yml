@@ -101,18 +101,35 @@ jobs:
     - name: Install Dependencies
       shell: bash
       run: |
-        if [["${{ runner.os }}" == "Linux"]]; then
+        if [[ "${{ runner.os }}" == "Linux" ]]; then
+          sudo apt-get update
+          # Install LLVM/Clang repository for latest packages
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-18 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
           sudo apt-get install -y \
             clang-18 \
+            clang++-18 \
             libc++-18-dev \
             libc++abi-18-dev \
             cmake \
-            lcov
-        elif [["${{ runner.os }}" == "macOS"]]; then
+            lcov \
+            build-essential
+          # Ensure clang-18 can find libc++ headers
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
+          # Verify installation
+          echo "Verifying Clang and libc++ installation..."
+          clang++-18 --version
+          echo "Checking for libc++ headers..."
+          find /usr/include -name "string" 2>/dev/null | head -5 || true
+          find /usr/lib/llvm-18 -name "string" 2>/dev/null | head -5 || true
+          echo "Testing simple compilation..."
+          echo '#include <string>' | clang++-18 -stdlib=libc++ -x c++ -c - -o /tmp/test.o || echo "Compilation test failed"
+        elif [[ "${{ runner.os }}" == "macOS" ]]; then
           # macOS has clang pre-installed, just ensure we have latest cmake
           brew install cmake
-        elif [["${{ runner.os }}" == "Windows"]]; then
+        elif [[ "${{ runner.os }}" == "Windows" ]]; then
           # Windows uses MSVC, which comes with Visual Studio
           echo "Using pre-installed MSVC on Windows"
         fi
@@ -130,7 +147,7 @@ jobs:
     - name: Build
       shell: bash
       run: |
-        if [["${{ runner.os }}" == "Windows"]]; then
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
           # Multi-config generators need --config
           cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --parallel
         else
@@ -142,7 +159,7 @@ jobs:
       shell: bash
       run: |
         cd build/${{ matrix.preset }}
-        if [["${{ runner.os }}" == "Windows"]]; then
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
           # Multi-config generators need -C config
           ctest -C ${{ matrix.build_type }} --output-on-failure --parallel
         else
@@ -302,9 +319,9 @@ jobs:
         # Run tests directly to ensure coverage instrumentation works
         LLVM_PROFILE_FILE="coverage-%p.profraw" ctest --output-on-failure
         # Also try running test binaries directly if ctest doesn't work
-        if [! -f coverage-*.profraw]; then
+        if [[ ! -f coverage-*.profraw ]]; then
           echo "No coverage files from ctest, trying direct execution..."
-          if [-f test/wshell_tests]; then
+          if [[ -f test/wshell_tests ]]; then
             LLVM_PROFILE_FILE="coverage-%p.profraw" ./test/wshell_tests
           fi
         fi
@@ -324,9 +341,9 @@ jobs:
           llvm-profdata-18 merge -sparse *.profraw -o coverage.profdata
           # Find the main executable or test binary to analyze
           TARGET_BINARY=""
-          if [-f "./test/wshell_tests"]; then
+          if [[ -f "./test/wshell_tests" ]]; then
             TARGET_BINARY="./test/wshell_tests"
-          elif [-f "./src/main/wshell"]; then
+          elif [[ -f "./src/main/wshell" ]]; then
             TARGET_BINARY="./src/main/wshell"
           else
             echo "No suitable binary found for coverage analysis"
@@ -335,7 +352,7 @@ jobs:
             ls -la src/main/ || true
           fi
 
-          if [-n "$TARGET_BINARY"]; then
+          if [[ -n "$TARGET_BINARY" ]]; then
             # Generate coverage report
             llvm-cov-18 export --format=lcov \
             --instr-profile=coverage.profdata "$TARGET_BINARY" > coverage.info
