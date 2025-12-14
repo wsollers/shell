@@ -146,7 +146,8 @@ jobs:
           libc++-18-dev \
           libc++abi-18-dev \
           cmake \
-          lcov
+          lcov \
+          llvm-18
           
     - name: Configure CMake for Coverage
       run: |
@@ -159,13 +160,31 @@ jobs:
     - name: Run Tests with Coverage
       run: |
         cd build/linux-coverage
+        # Set environment for LLVM coverage data collection
+        export LLVM_PROFILE_FILE="coverage-%p.profraw"
         ctest --output-on-failure
         
-    - name: Generate Coverage Report
+    - name: Generate Coverage Report (Clang/LLVM)
       run: |
         cd build/linux-coverage
-        lcov --capture --directory . --output-file coverage.info
-        lcov --remove coverage.info '/usr/*' '_deps/*' --output-file coverage_filtered.info
+        # Check if we have LLVM coverage data
+        if find . -name "*.profraw" -type f | grep -q .; then
+          echo "Using LLVM coverage (Clang)"
+          # Merge profile data
+          llvm-profdata-18 merge -sparse *.profraw -o coverage.profdata
+          # Generate coverage report
+          llvm-cov-18 export --format=lcov --instr-profile=coverage.profdata ./src/main/wshell > coverage.info
+          # Filter out system headers and dependencies
+          lcov --remove coverage.info '/usr/*' '_deps/*' --output-file coverage_filtered.info
+        elif find . -name "*.gcda" -type f | grep -q .; then
+          echo "Using GCC coverage (gcov)"
+          # Generate coverage with lcov
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' '_deps/*' --output-file coverage_filtered.info
+        else
+          echo "No coverage data found. Creating empty report."
+          touch coverage_filtered.info
+        fi
         
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v4

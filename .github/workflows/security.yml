@@ -69,7 +69,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@0.24.4
       with:
         scan-type: 'fs'
         format: 'sarif'
@@ -180,7 +180,7 @@ jobs:
         sarif_file: ${{ steps.msdo.outputs.sarifFile }}
         
     - name: Upload to Azure Defender for Cloud (if Azure credentials available)
-      if: success() && env.AZURE_CREDENTIALS != ''
+      if: success() && secrets.AZURE_CREDENTIALS != ''
       run: |
         echo "Defender for DevOps results are also being sent to Azure Security Center"
         echo "Check your Azure portal at: https://portal.azure.com/#view/Microsoft_Azure_Security/SecurityMenuBlade/~/0"
