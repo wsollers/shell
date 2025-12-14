@@ -184,8 +184,8 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-      continue-on-error: true
-      if: secrets.AZURE_CREDENTIALS
+      # continue-on-error: true
+      # if: ${{ secrets.AZURE_CREDENTIALS != '' }}
 
     - name: Run Microsoft Security DevOps
       uses: microsoft/security-devops-action@v1.6.0
