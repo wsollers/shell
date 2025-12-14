@@ -1,0 +1,210 @@
+name: Security
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  schedule:
+    # Run weekly security scans
+    - cron: '0 2 * * 1'
+
+jobs:
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    strategy:
+      matrix:
+        language: [ 'cpp' ]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-18 \
+          libc++-18-dev \
+          libc++abi-18-dev \
+          cmake
+    
+    - name: Build for Analysis
+      run: |
+        cmake --preset linux-release
+        cmake --build build/linux-release --parallel
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v4
+
+  vulnerability-scan:
+    name: Vulnerability Scanning
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  devskim-analysis:
+    name: Microsoft DevSkim Analysis
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Run DevSkim scanner
+      uses: microsoft/DevSkim-Action@v1
+      
+    - name: Upload DevSkim scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: devskim-results.sarif
+
+  cpp-code-analysis:
+    name: Microsoft C++ Code Analysis
+    runs-on: windows-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.25'
+        
+    - name: Configure CMake
+      run: |
+        cmake --preset windows-msvc-release
+        
+    - name: Run Microsoft C++ Code Analysis
+      uses: microsoft/msvc-code-analysis-action@v0.1.1
+      id: run-analysis
+      with:
+        cmakeBuildDirectory: build/windows-msvc-release
+        buildConfiguration: Release
+        ruleset: NativeRecommendedRules.ruleset
+        
+    - name: Upload SARIF to GitHub
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ steps.run-analysis.outputs.sarif }}
+
+  defender-for-devops:
+    name: Microsoft Defender for DevOps
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Run Microsoft Security DevOps
+      uses: microsoft/security-devops-action@v1.6.0
+      id: msdo
+      
+    - name: Upload alerts to Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: ${{ steps.msdo.outputs.sarifFile }}
+
+  script-analysis:
+    name: Script Security Analysis
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Install PowerShell
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget apt-transport-https software-properties-common
+        wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+        sudo dpkg -i packages-microsoft-prod.deb
+        sudo apt-get update
+        sudo apt-get install -y powershell
+        
+    - name: Install PSScriptAnalyzer
+      shell: pwsh
+      run: |
+        Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+        
+    - name: Run PSScriptAnalyzer on PowerShell scripts
+      shell: pwsh
+      run: |
+        $results = @()
+        Get-ChildItem -Path "./scripts" -Filter "*.ps1" | ForEach-Object {
+          $analysis = Invoke-ScriptAnalyzer -Path $_.FullName -Severity @('Error', 'Warning')
+          $results += $analysis
+        }
+        if ($results.Count -gt 0) {
+          $results | Format-Table -AutoSize
+          Write-Host "::warning::Found $($results.Count) PSScriptAnalyzer issues"
+        } else {
+          Write-Host "No PSScriptAnalyzer issues found"
+        }
+        
+    - name: Install ShellCheck for Bash analysis
+      run: |
+        sudo apt-get install -y shellcheck
+        
+    - name: Run ShellCheck on Bash scripts
+      run: |
+        echo "Running ShellCheck on Bash scripts..."
+        find ./scripts -name "*.sh" -type f | while read -r script; do
+          echo "Analyzing: $script"
+          if ! shellcheck "$script"; then
+            echo "::warning::ShellCheck found issues in $script"
+          fi
+        done

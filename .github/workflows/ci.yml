@@ -1,0 +1,206 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-24.04
+    
+    strategy:
+      matrix:
+        config:
+          - name: "Release Build"
+            preset: "linux-release"
+            build_type: "Release"
+          - name: "Debug Build"  
+            preset: "linux-debug"
+            build_type: "Debug"
+            
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-18 \
+          libc++-18-dev \
+          libc++abi-18-dev \
+          cmake \
+          lcov
+          
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.25'
+        
+    - name: Configure CMake
+      run: |
+        cmake --preset ${{ matrix.config.preset }}
+        
+    - name: Build
+      run: |
+        cmake --build build/${{ matrix.config.preset }} --parallel
+        
+    - name: Run Tests
+      run: |
+        cd build/${{ matrix.config.preset }}
+        ctest --output-on-failure --parallel
+        
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.config.name }}
+        path: build/${{ matrix.config.preset }}/Testing/
+
+  fuzzing:
+    name: Fuzzing Tests
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-18 \
+          libc++-18-dev \
+          libc++abi-18-dev \
+          cmake
+          
+    - name: Configure CMake for Fuzzing
+      run: |
+        cmake --preset linux-fuzz
+        
+    - name: Build Fuzz Targets
+      run: |
+        cmake --build build/linux-fuzz --parallel
+        
+    - name: Run Short Fuzz Tests
+      run: |
+        cd build/linux-fuzz
+        timeout 30s ./fuzz/fuzz_command_parser -max_total_time=25 || true
+        timeout 30s ./fuzz/fuzz_shell_core -max_total_time=25 || true
+
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-18 \
+          libc++-18-dev \
+          libc++abi-18-dev \
+          cmake
+          
+    - name: Configure CMake for Benchmarks
+      run: |
+        cmake --preset linux-bench
+        
+    - name: Build Benchmark Targets
+      run: |
+        cmake --build build/linux-bench --parallel
+        
+    - name: Run Benchmarks
+      run: |
+        cd build/linux-bench
+        ./bench/bench_command_parser --benchmark_format=json > command_parser_bench.json
+        ./bench/bench_shell_core --benchmark_format=json > shell_core_bench.json
+        
+    - name: Upload Benchmark Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results
+        path: build/linux-bench/*.json
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-18 \
+          libc++-18-dev \
+          libc++abi-18-dev \
+          cmake \
+          lcov
+          
+    - name: Configure CMake for Coverage
+      run: |
+        cmake --preset linux-coverage
+        
+    - name: Build with Coverage
+      run: |
+        cmake --build build/linux-coverage --parallel
+        
+    - name: Run Tests with Coverage
+      run: |
+        cd build/linux-coverage
+        ctest --output-on-failure
+        
+    - name: Generate Coverage Report
+      run: |
+        cd build/linux-coverage
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' '_deps/*' --output-file coverage_filtered.info
+        
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: build/linux-coverage/coverage_filtered.info
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: false
+        verbose: true
+
+  security:
+    name: Security Analysis  
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-18 \
+          libc++-18-dev \
+          libc++abi-18-dev \
+          cmake
+          
+    - name: Configure with Debug (closest to sanitizers)
+      run: |
+        cmake --preset linux-debug
+        
+    - name: Build Debug
+      run: |
+        cmake --build build/linux-debug --parallel
+        
+    - name: Run Tests in Debug Mode
+      run: |
+        cd build/linux-debug
+        ctest --output-on-failure

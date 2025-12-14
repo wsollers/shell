@@ -1,0 +1,65 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'src/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'Doxyfile'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'src/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'Doxyfile'
+
+jobs:
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          doxygen \
+          graphviz \
+          clang-18 \
+          libc++-18-dev \
+          libc++abi-18-dev \
+          cmake
+          
+    - name: Generate API Documentation
+      run: |
+        doxygen Doxyfile
+        
+    - name: Upload Documentation
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/html/
+        
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-24.04
+    needs: build-docs
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    permissions:
+      pages: write
+      id-token: write
+      
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
