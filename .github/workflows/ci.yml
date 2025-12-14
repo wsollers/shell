@@ -26,7 +26,7 @@ jobs:
         # Validate all workflow files
         find .github/workflows -name "*.yml" -o -name "*.yaml" | while read -r file; do
           echo "Validating: $file"
-          yamllint -c .github/workflows/.yamllint.yml "$file"
+          yamllint -c .github/.yamllint.yml "$file"
         done
 
         # Validate CMake presets
