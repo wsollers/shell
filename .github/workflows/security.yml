@@ -19,7 +19,7 @@ permissions:
 jobs:
   codeql:
     name: CodeQL Analysis
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
@@ -64,7 +64,7 @@ jobs:
 
   dependency-review:
     name: Dependency Review
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
 
     steps:
@@ -76,7 +76,7 @@ jobs:
 
   vulnerability-scan:
     name: Vulnerability Scanning
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
@@ -102,7 +102,7 @@ jobs:
 
   devskim-analysis:
     name: Microsoft DevSkim Analysis
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
@@ -169,7 +169,7 @@ jobs:
 
   defender-for-devops:
     name: Microsoft Defender for DevOps
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
@@ -182,6 +182,7 @@ jobs:
 
     - name: Azure Login
       uses: azure/login@v1
+      if: ${{ secrets.AZURE_CREDENTIALS != '' }}
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
       continue-on-error: true
@@ -190,19 +191,26 @@ jobs:
     - name: Run Microsoft Security DevOps
       uses: microsoft/security-devops-action@v1.6.0
       id: msdo
-      with:
-        config: |
-          {
-            "globalOptions": {
-              "exclude": [
-                "build/**/_deps/**",
-                "**/build/**/_deps/**",
-                "_deps/**",
-                "**/_deps/**"
-              ]
-            }
-          }
       continue-on-error: true
+      env:
+        # Force basic configuration without platform-specific tools
+        MSDO_DOCKERFILE_PATH: ""
+
+    - name: Debug Microsoft Security DevOps output
+      if: always()
+      run: |
+        echo "MSDO step outcome: ${{ steps.msdo.outcome }}"
+        echo "SARIF file: ${{ steps.msdo.outputs.sarifFile }}"
+        if [ -f "${{ steps.msdo.outputs.sarifFile }}" ]; then
+          echo "SARIF file exists and has size: $(stat -c%s "${{ steps.msdo.outputs.sarifFile }}" 2>/dev/null || echo "unknown")"
+        else
+          echo "SARIF file does not exist"
+        fi
+        # List .gdn directory if it exists
+        if [ -d ".gdn" ]; then
+          echo "Contents of .gdn directory:"
+          ls -la .gdn/ || true
+        fi
       # Alternative Azure configuration (commented out):
       #   config: |
       #     {
@@ -228,14 +236,14 @@ jobs:
 
     - name: Upload alerts to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v4
-      if: always() && steps.msdo.outputs.sarifFile != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+      if: success() && steps.msdo.outputs.sarifFile != '' && hashFiles(steps.msdo.outputs.sarifFile) != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       with:
         sarif_file: ${{ steps.msdo.outputs.sarifFile }}
 
     - name: Upload to Azure Defender for Cloud (if Azure credentials available)
       if: success()
       run: |
-        if [-n "$AZURE_CREDENTIALS"]; then
+        if [ -n "$AZURE_CREDENTIALS" ]; then
           echo "Defender for DevOps results are also being sent to Azure Security Center"
           echo "Check your Azure portal at: https://portal.azure.com/#view/Microsoft_Azure_Security/SecurityMenuBlade/~/0"
         else
@@ -246,7 +254,7 @@ jobs:
 
   script-analysis:
     name: Script Security Analysis
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout
