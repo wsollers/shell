@@ -234,7 +234,10 @@ jobs:
 
     - name: Upload alerts to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v4
-      if: success() && steps.msdo.outputs.sarifFile != '' && hashFiles(steps.msdo.outputs.sarifFile) != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+      if: success() && steps.msdo.outputs.sarifFile != '' && 
+        hashFiles(steps.msdo.outputs.sarifFile) != '' && 
+        (github.event_name != 'pull_request' || 
+        github.event.pull_request.head.repo.full_name == github.repository)
       with:
         sarif_file: ${{ steps.msdo.outputs.sarifFile }}
 
