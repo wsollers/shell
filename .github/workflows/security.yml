@@ -30,6 +30,7 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
+        config-file: ./.github/codeql/codeql-config.yml
         
     - name: Install Dependencies
       run: |
@@ -74,6 +75,7 @@ jobs:
         scan-type: 'fs'
         format: 'sarif'
         output: 'trivy-results.sarif'
+        skip-dirs: 'build/**/_deps/**,**/build/**/_deps/**,_deps/**,**/_deps/**'
         
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v3
@@ -95,6 +97,12 @@ jobs:
       
     - name: Run DevSkim scanner
       uses: microsoft/DevSkim-Action@v1
+      with:
+        ignore-globs: |
+          build/**/_deps/**
+          **/build/**/_deps/**
+          _deps/**
+          **/_deps/**
       
     - name: Upload DevSkim scan results
       uses: github/codeql-action/upload-sarif@v3
@@ -130,6 +138,11 @@ jobs:
         cmakeBuildDirectory: build/windows-msvc-release
         buildConfiguration: Release
         ruleset: NativeRecommendedRules.ruleset
+        excludePaths: |
+          build/**/_deps/**
+          **/build/**/_deps/**
+          _deps/**
+          **/_deps/**
         
     - name: Upload SARIF to GitHub
       uses: github/codeql-action/upload-sarif@v3
@@ -157,8 +170,19 @@ jobs:
     - name: Run Microsoft Security DevOps
       uses: microsoft/security-devops-action@v1.6.0
       id: msdo
-      # with:
-      #   # Send data to Azure Security Center (optional)
+      with:
+        config: |
+          {
+            "globalOptions": {
+              "exclude": [
+                "build/**/_deps/**",
+                "**/build/**/_deps/**", 
+                "_deps/**",
+                "**/_deps/**"
+              ]
+            }
+          }
+      # Alternative Azure configuration (commented out):
       #   config: |
       #     {
       #       "tools": {
@@ -170,6 +194,14 @@ jobs:
       #             "azure-workspace-name": "${{ secrets.AZURE_WORKSPACE_NAME }}"
       #           }
       #         }
+      #       },
+      #       "globalOptions": {
+      #         "exclude": [
+      #           "build/**/_deps/**",
+      #           "**/build/**/_deps/**", 
+      #           "_deps/**",
+      #           "**/_deps/**"
+      #         ]
       #       }
       #     }
         

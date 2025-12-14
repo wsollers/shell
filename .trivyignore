@@ -1,0 +1,16 @@
+# Trivy ignore file for security scanning
+# Ignore third-party dependencies fetched by CMake
+
+# CMake FetchContent dependencies
+build/**/_deps/**
+**/build/**/_deps/**
+_deps/**
+**/_deps/**
+
+# Common third-party library directories that might be present
+third_party/**
+**/third_party/**
+vendor/**
+**/vendor/**
+extern/**
+**/extern/**

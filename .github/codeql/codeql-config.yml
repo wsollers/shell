@@ -1,0 +1,17 @@
+name: "Security CodeQL Config"
+disable-default-rules: false
+
+paths-ignore:
+  - "build/**/_deps/**"
+  - "**/build/**/_deps/**"
+  - "_deps/**"
+  - "**/_deps/**"
+
+paths:
+  - "src/**"
+  - "test/**"
+  - "bench/**"
+  - "fuzz/**"
+
+queries:
+  - uses: security-and-quality
