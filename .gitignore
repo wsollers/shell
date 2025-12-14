@@ -47,3 +47,5 @@ perf.data*
 
 # Third party tools
 third_party/
+
+*.idx

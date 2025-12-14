@@ -6,14 +6,6 @@
 
 namespace shell {
 
-struct Exec::Impl {
-  virtual ~Impl() = default;
-  virtual void init_job_control() = 0;
-  virtual std::optional<ExecError> launch_command(Command const& cmd, bool bg, int& exit_status) = 0;
-  virtual std::optional<ExecError> launch_pipeline(Pipeline const& p, bool bg, int& exit_status) = 0;
-  virtual std::optional<ExecError> launch_logical_controller(Logical const& l, bool bg, Arena const& a) = 0;
-};
-
 static std::unique_ptr<Exec::Impl> make_exec_impl();
 
 class ExecWin32 final : public Exec::Impl {
