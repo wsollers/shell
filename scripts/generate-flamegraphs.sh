@@ -202,14 +202,22 @@ main() {
     
     # Generate flame graphs
     local success_count=0
+    local total_count=${#benchmarks[@]}
     for benchmark in "${benchmarks[@]}"; do
         IFS=':' read -r name path <<< "$benchmark"
         if generate_benchmark_flamegraph "$name" "$path" "$flamegraph_dir"; then
             ((success_count++))
+        else
+            warn "Failed to generate flame graph for $name"
         fi
     done
     
-    log "Generated $success_count flame graph(s) in $OUTPUT_DIR"
+    log "Generated $success_count/$total_count flame graph(s) in $OUTPUT_DIR"
+    
+    if [[ $success_count -eq 0 ]]; then
+        error "No flame graphs were generated successfully"
+        exit 1
+    fi
     
     # Create index HTML
     local index_file="${OUTPUT_DIR}/index.html"
