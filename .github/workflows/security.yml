@@ -157,21 +157,21 @@ jobs:
     - name: Run Microsoft Security DevOps
       uses: microsoft/security-devops-action@v1.6.0
       id: msdo
-      with:
-        # Send data to Azure Security Center (optional)
-        # config: |
-        #   {
-        #     "tools": {
-        #       "guardian": {
-        #         "args": {
-        #           "azure-tenant-id": "${{ secrets.AZURE_TENANT_ID }}",
-        #           "azure-subscription-id": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
-        #           "azure-resource-group": "${{ secrets.AZURE_RESOURCE_GROUP }}",
-        #           "azure-workspace-name": "${{ secrets.AZURE_WORKSPACE_NAME }}"
-        #         }
-        #       }
-        #     }
-        #   }
+      # with:
+      #   # Send data to Azure Security Center (optional)
+      #   config: |
+      #     {
+      #       "tools": {
+      #         "guardian": {
+      #           "args": {
+      #             "azure-tenant-id": "${{ secrets.AZURE_TENANT_ID }}",
+      #             "azure-subscription-id": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+      #             "azure-resource-group": "${{ secrets.AZURE_RESOURCE_GROUP }}",
+      #             "azure-workspace-name": "${{ secrets.AZURE_WORKSPACE_NAME }}"
+      #           }
+      #         }
+      #       }
+      #     }
         
     - name: Upload alerts to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
