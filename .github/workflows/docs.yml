@@ -68,7 +68,7 @@ jobs:
           find artifacts -name "coverage*.info" -exec cp {} site/coverage/ \; || true
           find artifacts -name "*.profraw" -exec cp {} site/data/ \; || true
           find artifacts -name "*.xml" -exec cp {} site/coverage/ \; || true
-          
+
           # Copy flame graph artifacts
           if [[ -d "artifacts/flame-graphs" ]]; then
             echo "Processing flame graph artifacts..."
