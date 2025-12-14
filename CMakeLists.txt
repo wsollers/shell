@@ -93,15 +93,17 @@ if(MSVC)
     endif()
 
     # Release-only optimization + hardening
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_compile_options(/O2 /GL)
-        add_link_options(
-            /LTCG
-            /OPT:REF
-            /OPT:ICF
-            /INCREMENTAL:NO
-        )
-    endif()
+    add_compile_options($<$<CONFIG:Release>:/O2>)
+    add_compile_options($<$<CONFIG:Release>:/GL>)
+    add_link_options(
+        $<$<CONFIG:Release>:/LTCG>
+        $<$<CONFIG:Release>:/OPT:REF>
+        $<$<CONFIG:Release>:/OPT:ICF>
+        $<$<CONFIG:Release>:/INCREMENTAL:NO>
+    )
+    
+    # Debug-only runtime checks
+    add_compile_options($<$<CONFIG:Debug>:/RTC1>)
 
 else()
     # ---- GCC / Clang compile hardening ----
