@@ -48,6 +48,17 @@ This is a command shell interpreter written in C++23. Security, performance, and
 ### Modern C++ Idioms
 - Use structured bindings for multiple return values
 - Leverage `std::optional` for optional values instead of pointers
+
+### Copyright and License Headers
+**REQUIRED:** Every source file (.cpp, .hpp, .h) must start with:
+```cpp
+// Copyright (c) 2024 William Sollers
+// SPDX-License-Identifier: BSD-2-Clause
+```
+- Place copyright header at the very top of the file (line 1)
+- Include the SPDX license identifier for SBOM compliance
+- Use BSD-2-Clause license as specified in LICENSE file
+- Add missing copyright headers during pre-push validation
 - Use `std::variant` for type-safe unions
 - Prefer `if constexpr` for compile-time branching
 - Use `[[nodiscard]]` on functions where ignoring return values is a bug
@@ -530,6 +541,12 @@ cmake --install build\windows-msvc-release
 - Run clang-tidy on modified files
 - Ensure no compiler warnings (`-Wall -Wextra -Wpedantic`)
 - Verify YAML files pass yamllint (`.github/workflows/*.yml`)
+- Check all source files have copyright headers:
+  ```bash
+  # Check for missing copyright headers
+  find src include test bench fuzz -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) \
+    -exec grep -L 'Copyright (c) 2024 William Sollers' {} \;
+  ```
 
 ### Pre-Push Checklist
 - [ ] Clean build completed successfully
@@ -541,6 +558,7 @@ cmake --install build\windows-msvc-release
 - [ ] No clang-tidy errors
 - [ ] Code follows C++23 best practices
 - [ ] Security vulnerabilities checked
+- [ ] All source files have copyright headers (Copyright (c) 2024 William Sollers + SPDX-License-Identifier: BSD-2-Clause)
 - [ ] Documentation updated (README, QUICKSTART, etc.)
 - [ ] Commit messages are clear and descriptive
 
