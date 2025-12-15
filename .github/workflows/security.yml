@@ -56,7 +56,7 @@ jobs:
 
     - name: Build for Analysis
       run: |
-        cmake --preset linux-release
+        cmake --preset linux-release -DENABLE_SBOM=OFF
         cmake --build build/linux-release --parallel
 
     - name: Perform CodeQL Analysis
