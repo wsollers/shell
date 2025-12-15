@@ -132,15 +132,17 @@ jobs:
     - name: Setup Python Environment for SBOM
       shell: bash
       run: |
-        python3 -m venv .venv
         if [[ "${{ runner.os }}" == "Windows" ]]; then
-          source .venv/Scripts/activate
+          # Windows uses 'python' not 'python3'
+          python -m venv .venv
+          # Git Bash on Windows needs this path
+          .venv/Scripts/python.exe -m pip install --upgrade pip
+          .venv/Scripts/python.exe -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
         else
-          source .venv/bin/activate
+          python3 -m venv .venv
+          .venv/bin/python3 -m pip install --upgrade pip
+          .venv/bin/python3 -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
         fi
-        pip install --upgrade pip
-        pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
-        deactivate
 
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2
