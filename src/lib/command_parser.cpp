@@ -9,6 +9,7 @@
 namespace wshell {
 
 std::expected<Tokens, std::string> CommandParser::tokenize(std::string_view input) {
+    (void)input; // Suppress unused parameter warning
     return std::unexpected("Unimplemented: CommandParser::tokenize");
 }
 

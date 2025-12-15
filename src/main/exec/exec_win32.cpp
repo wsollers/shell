@@ -6,8 +6,6 @@
 
 namespace shell {
 
-static std::unique_ptr<Exec::Impl> make_exec_impl();
-
 class ExecWin32 final : public Exec::Impl {
 public:
   void init_job_control() override {}

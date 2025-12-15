@@ -30,9 +30,12 @@ std::filesystem::path Config::default_config_path() {
     std::filesystem::path home;
     
 #ifdef _WIN32
-    char const* userprofile = std::getenv("USERPROFILE");
-    if (userprofile) {
+    // Use Windows-safe _dupenv_s
+    char* userprofile = nullptr;
+    size_t len = 0;
+    if (_dupenv_s(&userprofile, &len, "USERPROFILE") == 0 && userprofile) {
         home = userprofile;
+        free(userprofile);
     }
 #else
     // Try HOME first, fall back to getpwuid
