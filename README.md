@@ -28,40 +28,76 @@ The dashboard includes:
 
 ## Quick Start
 
-### Prerequisites
+### Prerequisites Installation
 
+**Automated installation of all dependencies:**
+
+```bash
+# Linux/macOS
+./scripts/prerequisites.sh
+
+# Windows (as Administrator)
+.\scripts\prerequisites.ps1
+```
+
+This installs:
+- **Compiler**: Clang 18+ (Linux/macOS) or Visual Studio 2022 Build Tools (Windows)
+- **Build Tools**: CMake 3.20+, Ninja
+- **Python**: 3.12+ with virtual environment
+- **SBOM Tools**: reuse, spdx-tools, ntia-conformance-checker (for software bill of materials)
+- **Development Libraries**: libc++ (Linux), platform-specific dependencies
+
+**Manual Installation:**
 - CMake 3.25 or higher
 - **Compiler Requirements:**
-  - **Linux/macOS**: Clang 16+ (automatically configured)
+  - **Linux/macOS**: Clang 18+ (recommended for C++23 support)
   - **Windows**: MSVC 2022+ (Visual Studio 2022)
-- Git (for fetching Google Test automatically)
+- Git (for fetching dependencies automatically)
+- Python 3.12+ (for SBOM generation)
 
-**Note**: Google Test will be downloaded automatically if not installed!
-
-**Installing Clang on Linux/macOS:**
-```bash
-# Ubuntu/Debian
-sudo apt-get install clang
-
-# macOS
-brew install llvm
-```
+**Note**: Dependencies like Google Test are downloaded automatically by CMake!
 
 ### Building
 
 **Linux/macOS:**
 ```bash
+# Activate Python environment for SBOM tools
+source .venv/bin/activate
+
+# Configure, build, and test
 ./scripts/configure.sh --release
 ./scripts/build.sh
 ./scripts/test.sh
+
+# Generate SBOM (Software Bill of Materials)
+cmake --install build/linux-release
 ```
 
 **Windows (PowerShell):**
 ```powershell
+# Activate Python environment for SBOM tools
+.\.venv\Scripts\Activate.ps1
+
+# Configure, build, and test
 .\scripts\configure.ps1 -Release
 .\scripts\build.ps1
 .\scripts\test.ps1
+
+# Generate SBOM
+cmake --install build\windows-msvc-release
 ```
+
+### SBOM (Software Bill of Materials)
+
+The project generates SPDX-compliant SBOM files for supply chain security:
+- **Tag-Value Format**: `wshell-sbom.spdx`
+- **JSON Format**: `wshell-sbom.spdx.json`
+
+SBOM files are generated during installation and include:
+- Package metadata and version information
+- File checksums (SHA1)
+- Compiler and build configuration
+- NTIA minimum elements compliance
 
 ### Build Types
 

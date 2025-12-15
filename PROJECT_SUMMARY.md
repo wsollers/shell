@@ -6,10 +6,13 @@ This zip file contains a complete, ready-to-build C++23 shell interpreter projec
 
 - ✅ Modern CMake 3.25+ build system with security hardening
 - ✅ Complete source code with library and executable
-- ✅ Comprehensive unit tests using Google Test
+- ✅ Comprehensive unit tests using Google Test (31+ tests)
 - ✅ Fuzz tests using libFuzzer
 - ✅ Cross-platform build scripts (Bash + PowerShell)
-- ✅ GitHub Actions CI/CD pipeline
+- ✅ Prerequisites installation scripts for dependencies
+- ✅ SBOM (Software Bill of Materials) generation in SPDX format
+- ✅ GitHub Actions CI/CD pipeline with SBOM artifacts
+- ✅ Configuration system with ~/.wshellrc support
 - ✅ AI Coding Guidelines for Claude, ChatGPT, and Copilot
 - ✅ BSD 2-Clause license
 - ✅ Doxygen configuration for documentation
@@ -46,11 +49,15 @@ shell-repo/
 │   └── fuzz_shell_core.cpp           # Fuzz test for core
 │
 ├── scripts/                          # Utility scripts (Bash + PowerShell)
+│   ├── prerequisites.sh / .ps1       # Install all build dependencies
 │   ├── configure.sh / .ps1           # Configure CMake build
 │   ├── build.sh / .ps1               # Build the project
 │   ├── test.sh / .ps1                # Run tests
 │   ├── fuzz.sh / .ps1                # Run fuzz tests
-│   └── clean.sh / .ps1               # Clean build artifacts
+│   ├── benchmark.sh / .ps1           # Run performance benchmarks
+│   ├── coverage.sh / .ps1            # Generate code coverage
+│   ├── clean.sh / .ps1               # Clean build artifacts
+│   └── USAGE.md                      # Detailed script documentation
 │
 ├── docs/                             # Documentation output directory
 ├── CMakeLists.txt                    # Root CMake configuration
@@ -82,20 +89,48 @@ shell-repo/
 - GCC/Clang: `-fstack-protector-strong`, `-fstack-clash-protection`, `-fcf-protection=full`, `-fPIE -pie`, Full RELRO
 
 ### 3. Testing Infrastructure
-**Unit Tests (22 tests total):**
+**Unit Tests (31+ tests total):**
 - ShellCore: version, execute, validation (9 tests)
-- CommandParser: tokenization, trimming (13 tests)
+- CommandParser: tokenization, trimming, error handling (13 tests)
+- Config: configuration file parsing, validation, security (21 tests)
 
 **Fuzz Tests:**
 - Command parser fuzzing
 - Shell core execution fuzzing
 - Corpus preservation for regression testing
 
-### 4. Cross-Platform Support
+**Benchmarks:**
+- Command parser performance
+- Shell core execution performance
+- Flame graph generation support
+
+### 4. SBOM Generation
+**Software Bill of Materials (Supply Chain Security):**
+- SPDX 2.3 format in both tag-value and JSON
+- NTIA minimum elements compliant
+- Includes package metadata, file checksums, compiler info
+- Generated automatically on install
+- Uploaded as CI/CD artifacts
+
+**SBOM Tools:**
+- reuse: REUSE compliance checking
+- spdx-tools: SPDX format conversion and validation
+- ntia-conformance-checker: NTIA compliance verification
+
+### 5. Configuration System
+**Bash-like Configuration:**
+- Config file: `~/.wshellrc`
+- Key-value pairs: `KEY=value`
+- Comment support with `#`
+- Quote handling for values with spaces
+- Security validation (1MB max size, 10K variables max)
+- Loaded automatically on startup
+
+### 6. Cross-Platform Support
 **Tested on:**
-- Linux (Ubuntu) with GCC/Clang
+- Linux (Ubuntu) with Clang 18+
 - macOS with Clang
-- Windows with MSVC
+- Windows with MSVC 2022+
 
 **Utility scripts available in both:**
 - Bash (.sh) for Linux/macOS

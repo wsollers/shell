@@ -430,6 +430,134 @@ Before implementing features, consider:
 - What happens on failure?
 - Can this be exploited?
 
+## Pre-Push Validation Requirements
+
+**MANDATORY:** Before pushing any changes to GitHub, ensure the following steps complete successfully:
+
+### 1. Prerequisites Installation
+Ensure all build dependencies and SBOM tools are installed:
+```bash
+# Linux/macOS
+./scripts/prerequisites.sh
+
+# Windows (as Administrator)
+.\scripts\prerequisites.ps1
+```
+
+### 2. Clean Build
+Remove all previous build artifacts to ensure a clean state:
+```bash
+# Linux/macOS
+./scripts/clean.sh
+
+# Windows
+.\scripts\clean.ps1
+```
+
+### 3. Configure
+Configure the build system with appropriate preset:
+```bash
+# Linux - Release build
+cmake --preset linux-release
+
+# macOS - Release build
+cmake --preset macos-release
+
+# Windows - Release build
+cmake --preset windows-msvc-release
+```
+
+### 4. Build
+Compile the project:
+```bash
+# Linux/macOS
+cmake --build build/linux-release --parallel
+# or
+./scripts/build.sh
+
+# Windows
+cmake --build build\windows-msvc-release --config Release --parallel
+# or
+.\scripts\build.ps1
+```
+
+### 5. Test
+Run all unit tests:
+```bash
+# Linux/macOS
+cd build/linux-release && ctest --output-on-failure
+# or
+./scripts/test.sh
+
+# Windows
+cd build\windows-msvc-release && ctest -C Release --output-on-failure
+# or
+.\scripts\test.ps1
+```
+
+### 6. Fuzz Testing
+Run fuzz tests (Linux/macOS only):
+```bash
+./scripts/fuzz.sh
+# Runs short fuzz tests (30 seconds per target)
+```
+
+### 7. Benchmarks
+Run performance benchmarks:
+```bash
+# Linux/macOS
+./scripts/benchmark.sh
+
+# Windows
+.\scripts\benchmark.ps1
+```
+
+### 8. SBOM Generation (Release builds only)
+Verify SBOM is generated correctly:
+```bash
+# Linux/macOS
+cmake --install build/linux-release
+
+# Windows
+cmake --install build\windows-msvc-release
+
+# Verify SBOM files exist:
+# - wshell-sbom.spdx (tag-value format)
+# - wshell-sbom.spdx.json (JSON format)
+```
+
+### 9. Code Quality Checks
+- Run clang-tidy on modified files
+- Ensure no compiler warnings (`-Wall -Wextra -Wpedantic`)
+- Verify YAML files pass yamllint (`.github/workflows/*.yml`)
+
+### Pre-Push Checklist
+- [ ] Clean build completed successfully
+- [ ] All tests pass (31+ tests)
+- [ ] Fuzz tests run without crashes
+- [ ] Benchmarks complete
+- [ ] SBOM generated (release builds)
+- [ ] No compiler warnings
+- [ ] No clang-tidy errors
+- [ ] Code follows C++23 best practices
+- [ ] Security vulnerabilities checked
+- [ ] Documentation updated (README, QUICKSTART, etc.)
+- [ ] Commit messages are clear and descriptive
+
+**Rationale:** This comprehensive validation ensures:
+- Code quality and correctness
+- Security vulnerabilities are caught early
+- Performance regressions are detected
+- Build system integrity
+- Supply chain security (SBOM)
+- Cross-platform compatibility
+
+**Automation:** The CI/CD pipeline performs these checks automatically, but local validation prevents:
+- Failed CI builds
+- Wasted CI/CD resources
+- Blocking other developers
+- Security issues reaching production
+
 ---
 
 **Remember:** Security, correctness, and maintainability come before performance. Write clear, secure code first, then optimize if needed.
