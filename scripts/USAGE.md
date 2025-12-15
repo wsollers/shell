@@ -2,6 +2,25 @@
 
 This directory contains build automation scripts for the shell project. Scripts are available for both Unix-like systems (Linux/macOS) and Windows.
 
+## Prerequisites Installation
+
+**First time setup - Install all dependencies:**
+
+```bash
+# Linux/macOS
+./scripts/prerequisites.sh
+
+# Windows (run as Administrator)
+.\scripts\prerequisites.ps1
+```
+
+This installs:
+- Clang 18+ (Linux) or Visual Studio 2022 (Windows)
+- CMake 3.20+
+- Python 3.12+
+- SBOM tools: reuse, spdx-tools, ntia-conformance-checker
+- Build tools and libraries
+
 ## Quick Start
 
 ```bash
@@ -22,6 +41,7 @@ This directory contains build automation scripts for the shell project. Scripts 
 
 | Script | Purpose | Platforms |
 |--------|---------|-----------|
+| `prerequisites` | Install all build dependencies and SBOM tools | Linux/macOS/Windows |
 | `clean` | Remove build directories | Linux/macOS/Windows |
 | `configure` | Configure CMake build system | Linux/macOS/Windows |
 | `build` | Compile the project | Linux/macOS/Windows |

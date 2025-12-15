@@ -98,7 +98,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Install Dependencies
+    - name: Install System Dependencies
       shell: bash
       run: |
         if [[ "${{ runner.os }}" == "Linux" ]]; then
@@ -114,25 +114,33 @@ jobs:
             libc++abi-18-dev \
             cmake \
             lcov \
-            build-essential
+            build-essential \
+            python3 \
+            python3-pip \
+            python3-venv
           # Ensure clang-18 can find libc++ headers
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
-          # Verify installation
-          echo "Verifying Clang and libc++ installation..."
-          clang++-18 --version
-          echo "Checking for libc++ headers..."
-          find /usr/include -name "string" 2>/dev/null | head -5 || true
-          find /usr/lib/llvm-18 -name "string" 2>/dev/null | head -5 || true
-          echo "Testing simple compilation..."
-          echo '#include <string>' | clang++-18 -stdlib=libc++ -x c++ -c - -o /tmp/test.o || echo "Compilation test failed"
         elif [[ "${{ runner.os }}" == "macOS" ]]; then
-          # macOS has clang pre-installed, just ensure we have latest cmake
-          brew install cmake
+          brew install cmake python@3.12
         elif [[ "${{ runner.os }}" == "Windows" ]]; then
           # Windows uses MSVC, which comes with Visual Studio
           echo "Using pre-installed MSVC on Windows"
+          choco install python312 -y
         fi
+
+    - name: Setup Python Environment for SBOM
+      shell: bash
+      run: |
+        python3 -m venv .venv
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        pip install --upgrade pip
+        pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
+        deactivate
 
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2
@@ -142,7 +150,12 @@ jobs:
     - name: Configure CMake
       shell: bash
       run: |
-        cmake --preset ${{ matrix.preset }}
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          PYTHON_EXE="$(pwd)/.venv/Scripts/python.exe"
+        else
+          PYTHON_EXE="$(pwd)/.venv/bin/python3"
+        fi
+        cmake --preset ${{ matrix.preset }} -DPython3_EXECUTABLE="$PYTHON_EXE"
 
     - name: Build
       shell: bash
@@ -174,25 +187,44 @@ jobs:
         name: test-results-${{ matrix.name }}
         path: build/${{ matrix.preset }}/Testing/
 
-    - name: Generate SBOM
+    - name: Install and Generate SBOM
       if: matrix.os == 'ubuntu-24.04' && matrix.preset == 'linux-release'
       shell: bash
       run: |
-        echo "Checking for SBOM file..."
-        if [ -f "build/${{ matrix.preset }}/wshell-sbom.spdx.json" ]; then
-          echo "✅ SBOM generated successfully"
-          cat build/${{ matrix.preset }}/wshell-sbom.spdx.json | head -30
+        echo "Installing to generate SBOM..."
+        source .venv/bin/activate
+        cmake --install build/${{ matrix.preset }}
+        deactivate
+        
+        # Find the SBOM files
+        SBOM_DIR="build/${{ matrix.preset }}/_deps/cmake-sbom-build/example/deploy"
+        
+        echo "Checking for SBOM files in $SBOM_DIR..."
+        ls -la "$SBOM_DIR"/ || true
+        
+        if [ -f "$SBOM_DIR/wshell-sbom.spdx.json" ]; then
+          echo "✅ SBOM JSON generated successfully"
+          echo "SBOM size: $(wc -c < "$SBOM_DIR/wshell-sbom.spdx.json") bytes"
+          echo "Preview:"
+          head -50 "$SBOM_DIR/wshell-sbom.spdx.json"
+          
+          # Copy to easier path for artifact upload
+          cp "$SBOM_DIR/wshell-sbom.spdx.json" build/wshell-sbom.spdx.json
+          cp "$SBOM_DIR/wshell-sbom.spdx" build/wshell-sbom.spdx
         else
-          echo "⚠️  SBOM file not found, may need manual generation"
-          ls -la build/${{ matrix.preset }}/ || true
+          echo "⚠️  SBOM JSON file not found"
+          echo "Searching for any SBOM files:"
+          find build/${{ matrix.preset }} -name "*sbom*" -type f || true
         fi
 
-    - name: Upload SBOM Artifact
+    - name: Upload SBOM Artifacts
       uses: actions/upload-artifact@v4
       if: matrix.os == 'ubuntu-24.04' && matrix.preset == 'linux-release'
       with:
-        name: sbom-spdx-json
-        path: build/${{ matrix.preset }}/wshell-sbom.spdx.json
+        name: sbom-files
+        path: |
+          build/wshell-sbom.spdx.json
+          build/wshell-sbom.spdx
         if-no-files-found: warn
 
   fuzzing:
