@@ -53,11 +53,13 @@ if [[ "$OS" == "linux" ]]; then
         sudo apt-get install -y \
             clang-18 \
             clang++-18 \
+            clang-tidy-18 \
             libc++-18-dev \
             libc++abi-18-dev \
             cmake \
             ninja-build \
             git \
+            lcov \
             python3 \
             python3-pip \
             python3-venv \
@@ -132,17 +134,19 @@ fi
 # Activate virtual environment and install packages
 source "$VENV_DIR/bin/activate"
 
-echo "Installing Python packages for SBOM generation..."
+echo "Installing Python packages for SBOM and validation tools..."
 pip install --upgrade pip
 pip install \
     reuse \
     "spdx-tools>=0.8.0" \
-    ntia-conformance-checker
+    ntia-conformance-checker \
+    yamllint
 
-echo -e "${GREEN}✓ Installed SBOM tools:${NC}"
+echo -e "${GREEN}✓ Installed Python tools:${NC}"
 echo "  - reuse: $(pip show reuse | grep Version | cut -d' ' -f2)"
 echo "  - spdx-tools: $(pip show spdx-tools | grep Version | cut -d' ' -f2)"
 echo "  - ntia-conformance-checker: $(pip show ntia-conformance-checker | grep Version | cut -d' ' -f2)"
+echo "  - yamllint: $(pip show yamllint | grep Version | cut -d' ' -f2)"
 
 deactivate
 

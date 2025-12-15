@@ -78,18 +78,20 @@ if (!(Test-Path $venvDir)) {
 # Activate virtual environment and install packages
 & "$venvDir\Scripts\Activate.ps1"
 
-Write-Host "Installing Python packages for SBOM generation..." -ForegroundColor Yellow
+Write-Host "Installing Python packages for SBOM and validation tools..." -ForegroundColor Yellow
 python -m pip install --upgrade pip
-python -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
+python -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker yamllint
 
-Write-Host "✓ Installed SBOM tools:" -ForegroundColor Green
+Write-Host "✓ Installed Python tools:" -ForegroundColor Green
 $reuseVersion = python -m pip show reuse | Select-String "Version:" | ForEach-Object { $_.ToString().Split()[1] }
 $spdxVersion = python -m pip show spdx-tools | Select-String "Version:" | ForEach-Object { $_.ToString().Split()[1] }
 $ntiaVersion = python -m pip show ntia-conformance-checker | Select-String "Version:" | ForEach-Object { $_.ToString().Split()[1] }
+$yamllintVersion = python -m pip show yamllint | Select-String "Version:" | ForEach-Object { $_.ToString().Split()[1] }
 
 Write-Host "  - reuse: $reuseVersion" -ForegroundColor White
 Write-Host "  - spdx-tools: $spdxVersion" -ForegroundColor White
 Write-Host "  - ntia-conformance-checker: $ntiaVersion" -ForegroundColor White
+Write-Host "  - yamllint: $yamllintVersion" -ForegroundColor White
 
 deactivate
 
