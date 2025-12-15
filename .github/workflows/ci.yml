@@ -137,7 +137,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       run: |
-        cmake --preset ${{ matrix.preset }}
+        cmake --preset ${{ matrix.preset }} -DENABLE_SBOM=OFF
 
     - name: Build
       shell: bash
