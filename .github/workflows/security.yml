@@ -146,7 +146,7 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cmake --preset windows-msvc-release
+        cmake --preset windows-msvc-release -DENABLE_SBOM=OFF
 
     - name: Run Microsoft C++ Code Analysis
       uses: microsoft/msvc-code-analysis-action@v0.1.1
