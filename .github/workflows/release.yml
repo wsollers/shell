@@ -44,15 +44,33 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
+        # Install LLVM/Clang repository for latest packages
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        echo "deb https://apt.llvm.org/noble/ llvm-toolchain-noble-18 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+        sudo apt-get update
         sudo apt-get install -y \
           clang-18 \
+          clang++-18 \
           libc++-18-dev \
           libc++abi-18-dev \
-          cmake
+          cmake \
+          python3 \
+          python3-pip \
+          python3-venv
+        # Ensure clang-18 can find libc++ headers
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
+
+    - name: Setup Python Environment for SBOM
+      run: |
+        python3 -m venv .venv
+        .venv/bin/python3 -m pip install --upgrade pip
+        .venv/bin/python3 -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
 
     - name: Configure CMake
       run: |
-        cmake --preset linux-release
+        PYTHON_EXE="$(pwd)/.venv/bin/python3"
+        cmake --preset linux-release -DPython3_EXECUTABLE="$PYTHON_EXE"
 
     - name: Build
       run: |
@@ -67,6 +85,51 @@ jobs:
       run: |
         cd build/linux-release
         cpack -C Release
+
+    - name: Generate SBOM
+      run: |
+        echo "Installing to generate SBOM..."
+        source .venv/bin/activate
+        cmake --install build/linux-release
+        deactivate
+
+        # Find the SBOM files
+        SBOM_DIR="build/linux-release/_deps/cmake-sbom-build/example/deploy"
+
+        echo "Checking for SBOM files in $SBOM_DIR..."
+        ls -la "$SBOM_DIR"/ || true
+
+        if [ -f "$SBOM_DIR/wshell-sbom.spdx.json" ]; then
+          echo "✅ SBOM JSON generated successfully"
+          echo "SBOM size: $(wc -c < "$SBOM_DIR/wshell-sbom.spdx.json") bytes"
+
+          # Copy to release directory
+          cp "$SBOM_DIR/wshell-sbom.spdx.json" build/linux-release/wshell-sbom.spdx.json
+          cp "$SBOM_DIR/wshell-sbom.spdx" build/linux-release/wshell-sbom.spdx
+        else
+          echo "⚠️  SBOM JSON file not found"
+          exit 1
+        fi
+
+    - name: Upload SBOM JSON as Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: build/linux-release/wshell-sbom.spdx.json
+        asset_name: wshell-${{ github.ref_name }}-sbom.spdx.json
+        asset_content_type: application/json
+
+    - name: Upload SBOM SPDX as Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: build/linux-release/wshell-sbom.spdx
+        asset_name: wshell-${{ github.ref_name }}-sbom.spdx
+        asset_content_type: text/plain
 
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1

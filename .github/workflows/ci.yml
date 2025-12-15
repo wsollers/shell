@@ -129,21 +129,6 @@ jobs:
           choco install python312 -y
         fi
 
-    - name: Setup Python Environment for SBOM
-      shell: bash
-      run: |
-        if [[ "${{ runner.os }}" == "Windows" ]]; then
-          # Windows uses 'python' not 'python3'
-          python -m venv .venv
-          # Git Bash on Windows needs this path
-          .venv/Scripts/python.exe -m pip install --upgrade pip
-          .venv/Scripts/python.exe -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
-        else
-          python3 -m venv .venv
-          .venv/bin/python3 -m pip install --upgrade pip
-          .venv/bin/python3 -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
-        fi
-
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2
       with:
@@ -152,12 +137,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       run: |
-        if [[ "${{ runner.os }}" == "Windows" ]]; then
-          PYTHON_EXE="$(pwd)/.venv/Scripts/python.exe"
-        else
-          PYTHON_EXE="$(pwd)/.venv/bin/python3"
-        fi
-        cmake --preset ${{ matrix.preset }} -DPython3_EXECUTABLE="$PYTHON_EXE"
+        cmake --preset ${{ matrix.preset }}
 
     - name: Build
       shell: bash
@@ -188,46 +168,6 @@ jobs:
       with:
         name: test-results-${{ matrix.name }}
         path: build/${{ matrix.preset }}/Testing/
-
-    - name: Install and Generate SBOM
-      if: matrix.os == 'ubuntu-24.04' && matrix.preset == 'linux-release'
-      shell: bash
-      run: |
-        echo "Installing to generate SBOM..."
-        source .venv/bin/activate
-        cmake --install build/${{ matrix.preset }}
-        deactivate
-
-        # Find the SBOM files
-        SBOM_DIR="build/${{ matrix.preset }}/_deps/cmake-sbom-build/example/deploy"
-
-        echo "Checking for SBOM files in $SBOM_DIR..."
-        ls -la "$SBOM_DIR"/ || true
-
-        if [ -f "$SBOM_DIR/wshell-sbom.spdx.json" ]; then
-          echo "✅ SBOM JSON generated successfully"
-          echo "SBOM size: $(wc -c < "$SBOM_DIR/wshell-sbom.spdx.json") bytes"
-          echo "Preview:"
-          head -50 "$SBOM_DIR/wshell-sbom.spdx.json"
-
-          # Copy to easier path for artifact upload
-          cp "$SBOM_DIR/wshell-sbom.spdx.json" build/wshell-sbom.spdx.json
-          cp "$SBOM_DIR/wshell-sbom.spdx" build/wshell-sbom.spdx
-        else
-          echo "⚠️  SBOM JSON file not found"
-          echo "Searching for any SBOM files:"
-          find build/${{ matrix.preset }} -name "*sbom*" -type f || true
-        fi
-
-    - name: Upload SBOM Artifacts
-      uses: actions/upload-artifact@v4
-      if: matrix.os == 'ubuntu-24.04' && matrix.preset == 'linux-release'
-      with:
-        name: sbom-files
-        path: |
-          build/wshell-sbom.spdx.json
-          build/wshell-sbom.spdx
-        if-no-files-found: warn
 
   fuzzing:
     name: Fuzzing Tests
