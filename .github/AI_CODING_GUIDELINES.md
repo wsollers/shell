@@ -274,6 +274,29 @@ Required scripts:
 
 ## CI/CD Pipeline (GitHub Actions)
 
+### Workflow Validation
+
+**REQUIRED:** Any modifications to GitHub Actions workflows (`.github/workflows/*.yml`) must be validated using the **GitHub Actions for VS Code** extension (`github.vscode-github-actions`) before committing:
+
+1. Open the workflow file in VS Code
+2. The extension will provide:
+   - Syntax validation and error highlighting
+   - IntelliSense for workflow syntax
+   - Real-time schema validation
+   - Action version checking
+3. Ensure no errors or warnings are shown
+4. Validate YAML syntax with `yamllint`:
+   ```bash
+   yamllint .github/workflows/*.yml
+   ```
+
+**Why this matters:**
+- Invalid workflows fail silently or with cryptic errors
+- Prevents CI/CD pipeline breakage
+- Catches typos in action names and versions
+- Validates secret references and context variables
+- Ensures proper YAML formatting
+
 ### Required Workflows
 
 #### 1. Build and Test
@@ -541,6 +564,10 @@ cmake --install build\windows-msvc-release
 - Run clang-tidy on modified files
 - Ensure no compiler warnings (`-Wall -Wextra -Wpedantic`)
 - Verify YAML files pass yamllint (`.github/workflows/*.yml`)
+- **Validate GitHub Actions workflows** using the GitHub Actions extension in VS Code
+  - Open each modified workflow file
+  - Ensure no errors or warnings from the extension
+  - Verify action versions are current
 - Check all source files have copyright headers:
   ```bash
   # Check for missing copyright headers
@@ -559,6 +586,7 @@ cmake --install build\windows-msvc-release
 - [ ] Code follows C++23 best practices
 - [ ] Security vulnerabilities checked
 - [ ] All source files have copyright headers (Copyright (c) 2024 William Sollers + SPDX-License-Identifier: BSD-2-Clause)
+- [ ] GitHub Actions workflows validated with VS Code extension (if modified)
 - [ ] Documentation updated (README, QUICKSTART, etc.)
 - [ ] Commit messages are clear and descriptive
 
