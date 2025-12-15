@@ -1,4 +1,4 @@
-#if defined(__linux__)
+#if defined(__APPLE__)
 
 #include "shell/exec.hpp"
 
@@ -41,25 +41,25 @@ static std::optional<ExecError> apply_redirs(Command const& cmd) {
   for (auto const& r : cmd.redirs) {
     int fd = -1;
     switch (r.kind) {
-      case RedirKind::In:
+      case RedirKind::IN:
         fd = ::open(r.target.c_str(), O_RDONLY);
         if (fd < 0) return sys_err("open <");
         if (::dup2(fd, STDIN_FILENO) < 0) return sys_err("dup2 <");
         ::close(fd);
         break;
-      case RedirKind::OutTrunc:
+      case RedirKind::OUT_TRUNC:
         fd = ::open(r.target.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (fd < 0) return sys_err("open >");
         if (::dup2(fd, STDOUT_FILENO) < 0) return sys_err("dup2 >");
         ::close(fd);
         break;
-      case RedirKind::OutAppend:
+      case RedirKind::OUT_APPEND:
         fd = ::open(r.target.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
         if (fd < 0) return sys_err("open >>");
         if (::dup2(fd, STDOUT_FILENO) < 0) return sys_err("dup2 >>");
         ::close(fd);
         break;
-      case RedirKind::Heredoc:
+      case RedirKind::HEREDOC:
         return ExecError{"heredoc (<<) not implemented yet"};
     }
   }
@@ -75,10 +75,18 @@ static std::vector<char*> make_argv(std::vector<std::string> const& argv, std::v
   return out;
 }
 
-class ExecLinux final : public Exec::Impl {
+struct Exec::Impl {
+  virtual ~Impl() = default;
+  virtual void init_job_control() = 0;
+  virtual std::optional<ExecError> launch_command(Command const& cmd, bool bg, int& exit_status) = 0;
+  virtual std::optional<ExecError> launch_pipeline(Pipeline const& p, bool bg, int& exit_status) = 0;
+  virtual std::optional<ExecError> launch_logical_controller(Logical const& l, bool bg, Arena const& a) = 0;
+};
+
+class ExecMac final : public Exec::Impl {
 public:
   void init_job_control() override {
-    tty_fd_ = STDIN_FILENO;
+    tty_fd_ = ::STDIN_FILENO;
     interactive_ = ::isatty(tty_fd_);
     if (!interactive_) return;
 
@@ -223,7 +231,7 @@ public:
       int lhs = 0;
       if (auto er = e.run_node_fg(l.lhs, a, lhs)) _exit(127);
 
-      bool run_rhs = (l.op == LogicalOp::AndIf) ? (lhs == 0) : (lhs != 0);
+      bool run_rhs = (l.op == LogicalOp::AND_IF) ? (lhs == 0) : (lhs != 0);
       if (!run_rhs) _exit(lhs);
 
       int rhs = 0;
@@ -242,9 +250,9 @@ private:
 };
 
 std::unique_ptr<Exec::Impl> make_exec_impl() {
-  return std::make_unique<ExecLinux>();
+  return std::make_unique<ExecMac>();
 }
 
 } // namespace shell
 
-#endif // __linux__
+#endif // __APPLE__

@@ -8,19 +8,19 @@
 namespace shell {
 
 enum class TokKind : std::uint8_t {
-  Word,
-  Pipe,       // |
-  AndIf,      // &&
-  OrIf,       // ||
-  Semi,       // ;
-  Amp,        // &
-  ROut,       // >
-  ROutApp,    // >>
-  RIn,        // <
-  Heredoc,    // <<
-  Eol,
-  End,
-  Error
+  WORD,
+  PIPE,       // |
+  AND_IF,     // &&
+  OR_IF,      // ||
+  SEMI,       // ;
+  AMP,        // &
+  R_OUT,      // >
+  R_OUT_APP,  // >>
+  R_IN,       // <
+  HEREDOC,    // <<
+  EOL,
+  END,
+  ERROR
 };
 
 struct Token {

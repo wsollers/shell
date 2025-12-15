@@ -3,12 +3,14 @@
 #include "shell/lexer.hpp"
 #include <optional>
 #include <string>
+#include <source_location>
 
 namespace shell {
 
 struct ParseError {
   std::size_t pos{};
   std::string msg;
+  std::source_location where;
 };
 
 struct ParseResult {

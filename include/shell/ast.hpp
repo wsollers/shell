@@ -7,10 +7,10 @@
 namespace shell {
 
 enum class RedirKind : std::uint8_t {
-  In,         // <
-  OutTrunc,   // >
-  OutAppend,  // >>
-  Heredoc     // <<
+  IN,         // <
+  OUT_TRUNC,  // >
+  OUT_APPEND, // >>
+  HEREDOC     // <<
 };
 
 struct Redir {
@@ -27,7 +27,7 @@ struct Pipeline {
   std::vector<Command> cmds; // >= 2 for pipeline; allow 1 if you want
 };
 
-enum class LogicalOp : std::uint8_t { AndIf, OrIf };
+enum class LogicalOp : std::uint8_t { AND_IF, OR_IF };
 
 struct Logical {
   LogicalOp op{};

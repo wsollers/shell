@@ -44,8 +44,8 @@ TEST(Parser, QuotesAndEscapes) {
 
 // Test parsing input and output redirections
 // Expected: Parse "cat < in.txt > out.txt" with two redirections:
-// - Input redirection from "in.txt" (RedirKind::In)
-// - Output redirection to "out.txt" (RedirKind::OutTrunc)
+// - Input redirection from "in.txt" (RedirKind::IN)
+// - Output redirection to "out.txt" (RedirKind::OUT_TRUNC)
 /*
 TEST(Parser, Redirections) {
   auto pr = parse_line("cat < in.txt > out.txt");
@@ -53,9 +53,9 @@ TEST(Parser, Redirections) {
   auto* c = std::get_if<Command>(&pr.arena.at(pr.seq.items[0].node).v);
   ASSERT_NE(c, nullptr);
   ASSERT_EQ(c->redirs.size(), 2u);
-  EXPECT_EQ(c->redirs[0].kind, RedirKind::In);
+  EXPECT_EQ(c->redirs[0].kind, RedirKind::IN);
   EXPECT_EQ(c->redirs[0].target, "in.txt");
-  EXPECT_EQ(c->redirs[1].kind, RedirKind::OutTrunc);
+  EXPECT_EQ(c->redirs[1].kind, RedirKind::OUT_TRUNC);
   EXPECT_EQ(c->redirs[1].target, "out.txt");
 }
 */
@@ -69,7 +69,7 @@ TEST(Parser, PipelinePrecedence) {
   auto& root = pr.arena.at(pr.seq.items[0].node).v;
   auto* log = std::get_if<Logical>(&root);
   ASSERT_NE(log, nullptr);
-  EXPECT_EQ(log->op, LogicalOp::AndIf);
+  EXPECT_EQ(log->op, LogicalOp::AND_IF);
 
   auto* lhsPipe = std::get_if<Pipeline>(&pr.arena.at(log->lhs).v);
   ASSERT_NE(lhsPipe, nullptr);

@@ -49,3 +49,4 @@ perf.data*
 third_party/
 
 *.idx
+debug_parser_stub

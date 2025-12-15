@@ -1,0 +1,29 @@
+# wshell configuration file
+# This file is loaded when wshell starts
+# Format: VARIABLE_NAME=value
+
+# User preferences
+EDITOR=vim
+PAGER=less
+
+# Paths
+MY_PATH=/usr/local/bin:/usr/bin:/bin
+PROJECT_DIR=/home/user/projects
+
+# Colors and display
+COLORTERM=truecolor
+TERM=xterm-256color
+
+# Custom aliases and settings
+DEFAULT_SHELL=wshell
+LOG_LEVEL=info
+
+# Example with quotes
+GREETING="Hello from wshell!"
+MESSAGE='Single quoted value'
+
+# Example with spaces (no quotes needed, but trimmed)
+DESCRIPTION=A secure command shell interpreter
+
+# Comments are ignored
+# Empty lines are also ignored

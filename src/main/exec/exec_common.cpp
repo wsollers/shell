@@ -37,7 +37,7 @@ std::optional<ExecError> Exec::run_node_fg(std::size_t node, Arena const& a, int
     int lhs = 0;
     if (auto e = run_node_fg(l->lhs, a, lhs)) return e;
 
-    bool run_rhs = (l->op == LogicalOp::AndIf) ? (lhs == 0) : (lhs != 0);
+    bool run_rhs = (l->op == LogicalOp::AND_IF) ? (lhs == 0) : (lhs != 0);
     if (!run_rhs) { exit_status = lhs; return std::nullopt; }
 
     int rhs = 0;

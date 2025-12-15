@@ -4,6 +4,7 @@
 #ifndef WSHELL_COMMAND_PARSER_H
 #define WSHELL_COMMAND_PARSER_H
 
+#include <expected>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -20,18 +21,22 @@
 
 namespace wshell {
 
+using Token = std::string;
+using Tokens = std::vector<Token>;
+
 /// @brief Command parsing utilities
 class WSHELL_API CommandParser {
 public:
-    /// @brief Parse a command line into tokens
-    /// @param input Command line input
-    /// @return Vector of tokens
-    [[nodiscard]] static std::vector<std::string> tokenize(std::string_view input);
-    
-    /// @brief Remove leading and trailing whitespace
-    /// @param str String to trim
-    /// @return Trimmed string view
-    [[nodiscard]] static std::string_view trim(std::string_view str) noexcept;
+    /// @brief Tokenize a command string into individual tokens
+    /// @param input The input string to tokenize
+    /// @return An expected containing tokens or an error message
+    static std::expected<Tokens, std::string> tokenize(std::string_view input);
+
+private:
+    /// @brief Trim whitespace from both ends of a string
+    /// @param str The string to trim
+    /// @return The trimmed string
+    static Token trim(std::string_view str);
 };
 
 } // namespace wshell

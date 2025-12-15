@@ -204,12 +204,13 @@ endif()
 # New ChatGPT files library
 # ============================
 add_library(shell_core
-  src/lexer.cpp
-  src/parser.cpp
-  src/exec_common.cpp
-  src/exec_linux.cpp
-  src/exec_macos.cpp
-  src/exec_win32.cpp
+  src/main/parser/lexer.cpp
+  src/main/parser/parser.cpp
+  src/main/parser/config.cpp
+  src/main/exec/exec_common.cpp
+  src/main/exec/exec_linux.cpp
+  src/main/exec/exec_macos.cpp
+  src/main/exec/exec_win32.cpp
 )
 target_include_directories(shell_core PUBLIC include)
 
@@ -239,7 +240,7 @@ if(ENABLE_TESTING)
     endif()
     
     # Add new ChatGPT test files
-    add_executable(shell_tests tests/test_parser.cpp)
+    add_executable(shell_tests test/test_parser.cpp)
     target_link_libraries(shell_tests PRIVATE shell_core gtest_main)
     include(GoogleTest)
     gtest_discover_tests(shell_tests)

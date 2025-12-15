@@ -7,18 +7,23 @@
 namespace wshell::test {
 
 TEST(CommandParserTest, TokenizeEmptyString) {
-    auto tokens = CommandParser::tokenize("");
-    EXPECT_TRUE(tokens.empty());
+    auto result = CommandParser::tokenize("");
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result->empty());
 }
 
 TEST(CommandParserTest, TokenizeSingleWord) {
-    auto tokens = CommandParser::tokenize("hello");
+    auto result = CommandParser::tokenize("hello");
+    ASSERT_TRUE(result.has_value());
+    auto& tokens = *result;
     ASSERT_EQ(tokens.size(), 1);
     EXPECT_EQ(tokens[0], "hello");
 }
 
 TEST(CommandParserTest, TokenizeMultipleWords) {
-    auto tokens = CommandParser::tokenize("echo hello world");
+    auto result = CommandParser::tokenize("echo hello world");
+    ASSERT_TRUE(result.has_value());
+    auto& tokens = *result;
     ASSERT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0], "echo");
     EXPECT_EQ(tokens[1], "hello");
@@ -26,47 +31,27 @@ TEST(CommandParserTest, TokenizeMultipleWords) {
 }
 
 TEST(CommandParserTest, TokenizeWithQuotes) {
-    auto tokens = CommandParser::tokenize("echo \"hello world\"");
+    auto result = CommandParser::tokenize("echo \"hello world\"");
+    ASSERT_TRUE(result.has_value());
+    auto& tokens = *result;
     ASSERT_EQ(tokens.size(), 2);
     EXPECT_EQ(tokens[0], "echo");
     EXPECT_EQ(tokens[1], "hello world");
 }
 
 TEST(CommandParserTest, TokenizeWithExtraSpaces) {
-    auto tokens = CommandParser::tokenize("  echo   test  ");
+    auto result = CommandParser::tokenize("  echo   test  ");
+    ASSERT_TRUE(result.has_value());
+    auto& tokens = *result;
     ASSERT_EQ(tokens.size(), 2);
     EXPECT_EQ(tokens[0], "echo");
     EXPECT_EQ(tokens[1], "test");
 }
 
-TEST(CommandParserTest, TrimEmptyString) {
-    auto result = CommandParser::trim("");
-    EXPECT_TRUE(result.empty());
-}
-
-TEST(CommandParserTest, TrimNoWhitespace) {
-    auto result = CommandParser::trim("hello");
-    EXPECT_EQ(result, "hello");
-}
-
-TEST(CommandParserTest, TrimLeadingWhitespace) {
-    auto result = CommandParser::trim("  hello");
-    EXPECT_EQ(result, "hello");
-}
-
-TEST(CommandParserTest, TrimTrailingWhitespace) {
-    auto result = CommandParser::trim("hello  ");
-    EXPECT_EQ(result, "hello");
-}
-
-TEST(CommandParserTest, TrimBothSides) {
-    auto result = CommandParser::trim("  hello  ");
-    EXPECT_EQ(result, "hello");
-}
-
-TEST(CommandParserTest, TrimWhitespaceOnly) {
-    auto result = CommandParser::trim("   ");
-    EXPECT_TRUE(result.empty());
+TEST(CommandParserTest, TokenizeUnclosedQuote) {
+    auto result = CommandParser::tokenize("echo \"hello");
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), "Unclosed quote in input");
 }
 
 } // namespace wshell::test
