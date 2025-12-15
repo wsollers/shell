@@ -197,19 +197,19 @@ jobs:
         source .venv/bin/activate
         cmake --install build/${{ matrix.preset }}
         deactivate
-        
+
         # Find the SBOM files
         SBOM_DIR="build/${{ matrix.preset }}/_deps/cmake-sbom-build/example/deploy"
-        
+
         echo "Checking for SBOM files in $SBOM_DIR..."
         ls -la "$SBOM_DIR"/ || true
-        
+
         if [ -f "$SBOM_DIR/wshell-sbom.spdx.json" ]; then
           echo "✅ SBOM JSON generated successfully"
           echo "SBOM size: $(wc -c < "$SBOM_DIR/wshell-sbom.spdx.json") bytes"
           echo "Preview:"
           head -50 "$SBOM_DIR/wshell-sbom.spdx.json"
-          
+
           # Copy to easier path for artifact upload
           cp "$SBOM_DIR/wshell-sbom.spdx.json" build/wshell-sbom.spdx.json
           cp "$SBOM_DIR/wshell-sbom.spdx" build/wshell-sbom.spdx
