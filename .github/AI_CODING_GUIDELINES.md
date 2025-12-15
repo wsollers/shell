@@ -239,6 +239,26 @@ All scripts in `scripts/` directory **MUST** have both:
 1. Bash version (`.sh`) for Linux/macOS
 2. PowerShell version (`.ps1`) for Windows
 
+**CRITICAL: Dependency Management**
+Whenever you add a new dependency or tool to the project (CMakeLists.txt, scripts, CI/CD workflows), you **MUST**:
+1. Verify if it needs to be added to prerequisites scripts:
+   - `scripts/prerequisites.sh` (Linux/macOS)
+   - `scripts/prerequisites.ps1` (Windows)
+2. Check these locations for new dependencies:
+   - CMakeLists.txt: find_package(), FetchContent, external libraries
+   - Build scripts: tools invoked by scripts (lcov, yamllint, clang-tidy, etc.)
+   - CI workflows: tools used in GitHub Actions
+   - Documentation: tools mentioned in README or QUICKSTART
+3. Update both prerequisite scripts simultaneously to maintain cross-platform consistency
+4. Test prerequisites scripts on clean systems when possible
+
+Examples of tools that must be in prerequisites:
+- Build tools: cmake, ninja, clang, gcc, msvc
+- Code quality: clang-tidy, cppcheck, clang-format
+- Testing: lcov (coverage), sanitizers
+- Validation: yamllint, shellcheck
+- SBOM: Python packages (reuse, spdx-tools, ntia-conformance-checker)
+
 Required scripts:
 - `configure.[sh|ps1]` - Configure CMake build
 - `build.[sh|ps1]` - Build the project
