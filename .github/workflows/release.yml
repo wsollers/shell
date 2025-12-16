@@ -83,9 +83,9 @@ jobs:
       run: |
         # Install Syft
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-        
+
         VERSION=${GITHUB_REF#refs/tags/}
-        
+
         # Generate SBOM for the built binaries
         syft scan dir:build/linux-release -o spdx-json=wshell-$VERSION-linux-sbom.spdx.json
         syft scan dir:build/linux-release -o spdx-tag-value=wshell-$VERSION-linux-sbom.spdx
@@ -102,7 +102,7 @@ jobs:
           cp "$PACKAGE_FILE" "wshell-$VERSION-linux-x64.tar.gz"
           gh release upload "$VERSION" "wshell-$VERSION-linux-x64.tar.gz"
         fi
-        
+
         # Upload SBOM files
         gh release upload "$VERSION" "wshell-$VERSION-linux-sbom.spdx.json"
         gh release upload "$VERSION" "wshell-$VERSION-linux-sbom.spdx"
