@@ -153,9 +153,9 @@ jobs:
     - name: Debug Build Configuration
       run: |
         echo "Build directory contents:"
-        ls -la build/windows-msvc-release/ || dir build\windows-msvc-release
+        dir build\windows-msvc-release
         echo "CMake cache contents:"
-        type build\windows-msvc-release\CMakeCache.txt | findstr "CMAKE_BUILD_TYPE\|ENABLE_" || echo "Cache not found"
+        type build\windows-msvc-release\CMakeCache.txt | findstr "CMAKE_BUILD_TYPE ENABLE_" 2>nul || echo "Cache not found"
 
     - name: Build Project First
       run: |
