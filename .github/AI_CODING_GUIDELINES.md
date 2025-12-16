@@ -52,7 +52,7 @@ This is a command shell interpreter written in C++23. Security, performance, and
 ### Copyright and License Headers
 **REQUIRED:** Every source file (.cpp, .hpp, .h) must start with:
 ```cpp
-// Copyright (c) 2024 William Sollers
+// Copyright (c) 2025 William Sollers
 // SPDX-License-Identifier: BSD-2-Clause
 ```
 - Place copyright header at the very top of the file (line 1)
@@ -138,6 +138,7 @@ Follow Clang Hardening Guide:
 - Implement proper exception handling
 - Zero sensitive data before destruction
 - Use constant-time comparison for security-sensitive data
+- check and verify ownership and lifetime issues
 
 ## Project Structure
 
@@ -232,6 +233,41 @@ shell/
 - Links Google Benchmark
 - For performance regression testing
 ```
+
+### Hybrid Standard Library Configuration (Clang)
+
+**CRITICAL:** For Clang builds with fuzzing enabled, use a **hybrid linking approach** to resolve standard library compatibility issues:
+
+#### Problem
+- **libc++** is required for modern C++23 features and compile-time performance
+- **libFuzzer** runtime is built against **libstdc++** on most Linux distributions
+- Direct linking causes symbol conflicts and runtime errors
+
+#### Solution: Hybrid Compile/Link Strategy
+```cmake
+# For fuzz targets only (when ENABLE_FUZZING=ON)
+target_compile_options(fuzz_target PRIVATE
+    -stdlib=libc++              # Use libc++ for compilation (C++23 support)
+)
+target_link_options(fuzz_target PRIVATE
+    -stdlib=libstdc++           # Use libstdc++ for linking (libFuzzer compatibility)
+    -lc++                       # Explicitly link libc++ runtime
+    -fsanitize=fuzzer           # Link libFuzzer (built against libstdc++)
+)
+```
+
+#### When to Apply
+- **Regular builds**: Use pure libc++ (`-stdlib=libc++` for both compile and link)
+- **Fuzz targets only**: Use hybrid approach (libc++ compile, libstdc++ link + explicit libc++ runtime)
+- **Other sanitizers**: Can use pure libc++ approach
+
+#### Rationale
+This hybrid approach allows:
+1. **Compilation**: Full C++23 feature support via libc++ headers
+2. **Linking**: Compatible runtime linking with system libFuzzer
+3. **Runtime**: Explicit libc++ symbols for modern C++ features, libstdc++ base for fuzzer runtime
+
+**Note:** This is a workaround for distribution-specific libFuzzer builds. In ideal environments with libc++-built libFuzzer, use pure libc++ throughout.
 
 ### Utility Scripts
 
@@ -592,7 +628,7 @@ cmake --install build\windows-msvc-release
   ```bash
   # Check for missing copyright headers
   find src include test bench fuzz -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) \
-    -exec grep -L 'Copyright (c) 2024 William Sollers' {} \;
+    -exec grep -L 'Copyright (c) 2025 William Sollers' {} \;
   ```
 
 ### Pre-Push Checklist
@@ -605,7 +641,7 @@ cmake --install build\windows-msvc-release
 - [ ] No clang-tidy errors
 - [ ] Code follows C++23 best practices
 - [ ] Security vulnerabilities checked
-- [ ] All source files have copyright headers (Copyright (c) 2024 William Sollers + SPDX-License-Identifier: BSD-2-Clause)
+- [ ] All source files have copyright headers (Copyright (c) 2025 William Sollers + SPDX-License-Identifier: BSD-2-Clause)
 - [ ] GitHub Actions workflows validated with VS Code extension (if modified)
 - [ ] Documentation updated (README, QUICKSTART, etc.)
 - [ ] Commit messages are clear and descriptive

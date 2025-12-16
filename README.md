@@ -47,6 +47,20 @@ This installs:
 - **SBOM Tools**: reuse, spdx-tools, ntia-conformance-checker (for software bill of materials)
 - **Development Libraries**: libc++ (Linux), platform-specific dependencies
 
+### Development Environments
+
+**🐳 Development Container (Recommended)**
+
+For the fastest setup with a pre-configured environment:
+
+```bash
+# Requirements: VS Code + Dev Containers extension
+# Opens project in isolated Ubuntu 24.04 container with all tools pre-installed
+code .  # Open in VS Code, then "Reopen in Container"
+```
+
+Includes: Ubuntu 24.04, Clang 18, CMake 3.30+, Python 3.12, all SBOM tools, and development aliases.
+
 **Manual Installation:**
 - CMake 3.25 or higher
 - **Compiler Requirements:**
@@ -155,6 +169,6 @@ Contributions are welcome! Please read the [AI Coding Guidelines](.github/AI_COD
 
 ## License
 
-Copyright (c) 2024 William Sollers
+Copyright (c) 2025 William Sollers
 
 This project is licensed under the BSD 2-Clause License - see the [LICENSE](LICENSE) file for details.

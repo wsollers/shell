@@ -254,5 +254,5 @@ For questions or issues:
 
 ---
 
-**Copyright (c) 2024 William Sollers**  
+**Copyright (c) 2025 William Sollers**  
 **License: BSD 2-Clause**
