@@ -7,8 +7,8 @@
 using namespace shell;
 
 static void BM_LexParse(benchmark::State& state) {
-  Lexer lx;
-  Parser p;
+  [[maybe_unused]] Lexer lx;
+  [[maybe_unused]] Parser p;
 
   std::vector<std::string> samples = {
     "echo hello world",
