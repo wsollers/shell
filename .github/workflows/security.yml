@@ -154,9 +154,18 @@ jobs:
       shell: pwsh
       run: |
         Write-Host "Build directory contents:"
-        if (Test-Path build\windows-msvc-release) { Get-ChildItem build\windows-msvc-release } else { Write-Host "Build directory not found" }
+        if (Test-Path build\windows-msvc-release) {
+          Get-ChildItem build\windows-msvc-release
+        } else {
+          Write-Host "Build directory not found"
+        }
         Write-Host "CMake cache contents:"
-        if (Test-Path build\windows-msvc-release\CMakeCache.txt) { Select-String -Path build\windows-msvc-release\CMakeCache.txt -Pattern "CMAKE_BUILD_TYPE|ENABLE_" } else { Write-Host "Cache not found" }
+        if (Test-Path build\windows-msvc-release\CMakeCache.txt) {
+          Select-String -Path build\windows-msvc-release\CMakeCache.txt `
+            -Pattern "CMAKE_BUILD_TYPE|ENABLE_"
+        } else {
+          Write-Host "Cache not found"
+        }
 
     - name: Build Project First
       run: |
