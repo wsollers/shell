@@ -72,15 +72,15 @@ jobs:
             preset: "linux-debug"
             build_type: "Debug"
 
-          # macOS builds (commented out for review)
-          # - name: "macOS Release (Clang + libc++)"
-          #   os: macos-14
-          #   preset: "macos-release"
-          #   build_type: "Release"
-          # - name: "macOS Debug (Clang + libc++)"
-          #   os: macos-14
-          #   preset: "macos-debug"
-          #   build_type: "Debug"
+          # macOS builds
+          - name: "macOS Release (Clang 18 + libc++)"
+            os: macos-14
+            preset: "macos-release"
+            build_type: "Release"
+          - name: "macOS Debug (Clang 18 + libc++)"
+            os: macos-14
+            preset: "macos-debug"
+            build_type: "Debug"
 
           # Windows builds
           - name: "Windows Release (MSVC)"
@@ -122,7 +122,19 @@ jobs:
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
         elif [[ "${{ runner.os }}" == "macOS" ]]; then
-          brew install cmake python@3.12
+          brew install cmake
+          # Install LLVM 18 (includes clang-18 and clang++-18)
+          brew install llvm@18 || brew install llvm
+          # Add LLVM to PATH so clang-18/clang++-18 are available
+          echo "/opt/homebrew/opt/llvm/bin:/usr/local/opt/llvm/bin" >> $GITHUB_PATH
+          # Create symlinks for clang-18/clang++-18 if they don't exist
+          if [[ ! -f "/opt/homebrew/opt/llvm/bin/clang-18" ]] && [[ ! -f "/usr/local/opt/llvm/bin/clang-18" ]]; then
+            # Fallback: create symlinks in /usr/local/bin for consistency
+            sudo ln -sf /opt/homebrew/opt/llvm/bin/clang /usr/local/bin/clang-18 2>/dev/null || \
+            sudo ln -sf /usr/local/opt/llvm/bin/clang /usr/local/bin/clang-18 || true
+            sudo ln -sf /opt/homebrew/opt/llvm/bin/clang++ /usr/local/bin/clang++-18 2>/dev/null || \
+            sudo ln -sf /usr/local/opt/llvm/bin/clang++ /usr/local/bin/clang++-18 || true
+          fi
         elif [[ "${{ runner.os }}" == "Windows" ]]; then
           # Windows uses MSVC, which comes with Visual Studio
           echo "Using pre-installed MSVC on Windows"

@@ -119,17 +119,23 @@ jobs:
       - name: Install Dependencies
         run: |
           brew install cmake
-          # Install LLVM which includes clang and clang++
+          # Install LLVM 18 (includes clang-18 and clang++-18)
           brew install llvm@18 || brew install llvm
-          # Add LLVM to PATH
+          # Add LLVM to PATH so clang-18/clang++-18 are available
           echo "/opt/homebrew/opt/llvm/bin:/usr/local/opt/llvm/bin" >> $GITHUB_PATH
+          # Create symlinks for clang-18/clang++-18 if they don't exist
+          if [[ ! -f "/opt/homebrew/opt/llvm/bin/clang-18" ]] && [[ ! -f "/usr/local/opt/llvm/bin/clang-18" ]]; then
+            # Fallback: create symlinks in /usr/local/bin for consistency
+            sudo ln -sf /opt/homebrew/opt/llvm/bin/clang /usr/local/bin/clang-18 2>/dev/null || \
+            sudo ln -sf /usr/local/opt/llvm/bin/clang /usr/local/bin/clang-18 || true
+            sudo ln -sf /opt/homebrew/opt/llvm/bin/clang++ /usr/local/bin/clang++-18 2>/dev/null || \
+            sudo ln -sf /usr/local/opt/llvm/bin/clang++ /usr/local/bin/clang++-18 || true
+          fi
 
       - name: Configure CMake
         run: |
-          # Use system clang on macOS since clang-18 package name differs
-          cmake --preset macos-release \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++
+          # Use the preset which should now find clang-18
+          cmake --preset macos-release
 
       - name: Build
         run: |
