@@ -8,16 +8,14 @@ on:
   release:
     types: [created]
 
-permissions:
-  contents: write
-  packages: write
-  actions: read
-
 jobs:
   create-release:
     name: Create Release
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/')
+
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
 
     steps:
     - name: Checkout
@@ -25,18 +23,14 @@ jobs:
 
     - name: Create Release
       id: create_release
+      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Extract version from tag
-        VERSION=${GITHUB_REF#refs/tags/}
-
-        # Create release using GitHub CLI
-        gh release create "$VERSION" \
-          --title "Release $VERSION" \
-          --notes-from-tag \
-          --draft=false \
-          --prerelease=false
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
 
   build-linux:
     name: Build Linux Release
@@ -59,14 +53,25 @@ jobs:
           clang++-18 \
           libc++-18-dev \
           libc++abi-18-dev \
-          cmake
+          cmake \
+          python3 \
+          python3-pip \
+          python3-venv
         # Ensure clang-18 can find libc++ headers
         sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
 
-    - name: Configure and Build
+    - name: Setup Python Environment for SBOM
       run: |
-        cmake --preset linux-release
+        python3 -m venv .venv
+        .venv/bin/python3 -m pip install --upgrade pip
+        .venv/bin/python3 -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
+
+    - name: Configure and Build with SBOM
+      run: |
+        PYTHON_EXE="$(pwd)/.venv/bin/python3"
+        # Use our SBOM script for proper configuration
+        cmake --preset linux-release -DENABLE_SBOM=ON -DPython3_EXECUTABLE="$PYTHON_EXE"
         cmake --build build/linux-release --parallel --config Release
 
     - name: Run Tests
@@ -81,31 +86,58 @@ jobs:
 
     - name: Generate SBOM
       run: |
-        # Install Syft
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        echo "Installing to generate SBOM..."
+        source .venv/bin/activate
+        cmake --install build/linux-release
+        deactivate
 
-        VERSION=${GITHUB_REF#refs/tags/}
+        # Find the SBOM files
+        SBOM_DIR="build/linux-release/_deps/cmake-sbom-build/example/deploy"
 
-        # Generate SBOM for the built binaries
-        syft scan dir:build/linux-release -o spdx-json=wshell-$VERSION-linux-sbom.spdx.json
-        syft scan dir:build/linux-release -o spdx-tag-value=wshell-$VERSION-linux-sbom.spdx
+        echo "Checking for SBOM files in $SBOM_DIR..."
+        ls -la "$SBOM_DIR"/ || true
 
-    - name: Upload Linux Binary and SBOM to Release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/}
+        if [ -f "$SBOM_DIR/wshell-sbom.spdx.json" ]; then
+          echo "✅ SBOM JSON generated successfully"
+          echo "SBOM size: $(wc -c < "$SBOM_DIR/wshell-sbom.spdx.json") bytes"
 
-        # Find the generated package
-        PACKAGE_FILE=$(find build/linux-release -name "wshell-*-Linux.tar.gz" | head -1)
-        if [ -n "$PACKAGE_FILE" ]; then
-          cp "$PACKAGE_FILE" "wshell-$VERSION-linux-x64.tar.gz"
-          gh release upload "$VERSION" "wshell-$VERSION-linux-x64.tar.gz"
+          # Copy to release directory
+          cp "$SBOM_DIR/wshell-sbom.spdx.json" build/linux-release/wshell-sbom.spdx.json
+          cp "$SBOM_DIR/wshell-sbom.spdx" build/linux-release/wshell-sbom.spdx
+        else
+          echo "⚠️  SBOM JSON file not found"
+          exit 1
         fi
 
-        # Upload SBOM files
-        gh release upload "$VERSION" "wshell-$VERSION-linux-sbom.spdx.json"
-        gh release upload "$VERSION" "wshell-$VERSION-linux-sbom.spdx"
+    - name: Upload SBOM JSON as Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: build/linux-release/wshell-sbom.spdx.json
+        asset_name: wshell-${{ github.ref_name }}-sbom.spdx.json
+        asset_content_type: application/json
+
+    - name: Upload SBOM SPDX as Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: build/linux-release/wshell-sbom.spdx
+        asset_name: wshell-${{ github.ref_name }}-sbom.spdx
+        asset_content_type: text/plain
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: build/linux-release/wshell-*-Linux.tar.gz
+        asset_name: wshell-${{ github.ref_name }}-linux-x64.tar.gz
+        asset_content_type: application/gzip
 
   build-macos:
     name: Build macOS Release
@@ -113,69 +145,41 @@ jobs:
     needs: create-release
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: |
-          brew install cmake
-          # Install LLVM 18 (includes clang-18 and clang++-18)
-          brew install llvm@18 || brew install llvm
-          # Determine correct LLVM path
-          if [[ -d "/opt/homebrew/opt/llvm@18/bin" ]]; then
-            LLVM_BIN="/opt/homebrew/opt/llvm@18/bin"
-            LLVM_PATH="/opt/homebrew/opt/llvm@18/bin"
-          elif [[ -d "/usr/local/opt/llvm@18/bin" ]]; then
-            LLVM_BIN="/usr/local/opt/llvm@18/bin"
-            LLVM_PATH="/usr/local/opt/llvm@18/bin"
-          elif [[ -d "/opt/homebrew/opt/llvm/bin" ]]; then
-            LLVM_BIN="/opt/homebrew/opt/llvm/bin"
-            LLVM_PATH="/opt/homebrew/opt/llvm/bin"
-          else
-            LLVM_BIN="/usr/local/opt/llvm/bin"
-            LLVM_PATH="/usr/local/opt/llvm/bin"
-          fi
-          # Add LLVM to PATH
-          echo "$LLVM_PATH" >> $GITHUB_PATH
-          # Create symlinks for clang-18/clang++-18
-          sudo mkdir -p /usr/local/bin
-          sudo ln -sf "$LLVM_BIN/clang" /usr/local/bin/clang-18
-          sudo ln -sf "$LLVM_BIN/clang++" /usr/local/bin/clang++-18
-          # Verify the symlinks work
-          /usr/local/bin/clang-18 --version
-          /usr/local/bin/clang++-18 --version
+    - name: Install Dependencies
+      run: |
+        brew install cmake llvm
 
-      - name: Configure CMake
-        run: |
-          # Use the preset which should now find clang-18
-          cmake --preset macos-release
+    - name: Configure CMake
+      run: |
+        export PATH="/usr/local/opt/llvm/bin:$PATH"
+        cmake --preset macos-release
 
-      - name: Build
-        run: |
-          cmake --build build/macos-release --parallel --config Release
+    - name: Build
+      run: |
+        cmake --build build/macos-release --parallel --config Release
 
-      - name: Run Tests
-        run: |
-          cd build/macos-release
-          ctest --output-on-failure --parallel
+    - name: Run Tests
+      run: |
+        cd build/macos-release
+        ctest --output-on-failure --parallel
 
-      - name: Package
-        run: |
-          cd build/macos-release
-          cpack -C Release
+    - name: Package
+      run: |
+        cd build/macos-release
+        cpack -C Release
 
-      - name: Upload macOS Binary to Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-
-          # Find the generated package
-          PACKAGE_FILE=$(find build/macos-release -name "wshell-*-Darwin.tar.gz" | head -1)
-          if [ -n "$PACKAGE_FILE" ]; then
-            cp "$PACKAGE_FILE" "wshell-$VERSION-macos-x64.tar.gz"
-            gh release upload "$VERSION" "wshell-$VERSION-macos-x64.tar.gz"
-          fi
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: build/macos-release/wshell-*-Darwin.tar.gz
+        asset_name: wshell-${{ github.ref_name }}-macos-x64.tar.gz
+        asset_content_type: application/gzip
 
   build-windows:
     name: Build Windows Release
@@ -183,42 +187,38 @@ jobs:
     needs: create-release
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.25'
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.25'
 
-      - name: Configure CMake
-        run: |
-          cmake --preset windows-msvc-release
+    - name: Configure CMake
+      run: |
+        cmake --preset windows-msvc-release
 
-      - name: Build
-        run: |
-          cmake --build build/windows-msvc-release --parallel --config Release
+    - name: Build
+      run: |
+        cmake --build build/windows-msvc-release --parallel --config Release
 
-      - name: Run Tests
-        run: |
-          cd build/windows-msvc-release
-          ctest --output-on-failure --parallel -C Release
+    - name: Run Tests
+      run: |
+        cd build/windows-msvc-release
+        ctest --output-on-failure --parallel -C Release
 
-      - name: Package
-        run: |
-          cd build/windows-msvc-release
-          # For Visual Studio generator, we need to specify the config
-          cpack -C Release --config CPackConfig.cmake
+    - name: Package
+      run: |
+        cd build/windows-msvc-release
+        cpack -C Release
 
-      - name: Upload Windows Binary to Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $VERSION = $env:GITHUB_REF -replace '^refs/tags/', ''
-
-          # Find the generated package
-          $PACKAGE_FILE = Get-ChildItem -Path "build/windows-msvc-release" -Name "wshell-*-win64.zip" | Select-Object -First 1
-          if ($PACKAGE_FILE) {
-            Copy-Item "build/windows-msvc-release/$PACKAGE_FILE" "wshell-$VERSION-windows-x64.zip"
-            gh release upload "$VERSION" "wshell-$VERSION-windows-x64.zip"
-          }
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: build/windows-msvc-release/wshell-*-win64.zip
+        asset_name: wshell-${{ github.ref_name }}-windows-x64.zip
+        asset_content_type: application/zip

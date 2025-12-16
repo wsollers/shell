@@ -1,5 +1,5 @@
 PROJECT_NAME           = "wshell"
-PROJECT_NUMBER         = "0.1.0"
+PROJECT_NUMBER         = "0.2.1"
 PROJECT_BRIEF          = "A Secure Command Shell Interpreter"
 OUTPUT_DIRECTORY       = docs
 INPUT                  = src README.md

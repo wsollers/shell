@@ -20,6 +20,50 @@ This prompt is designed for:
 
 This is a command shell interpreter written in C++23. Security, performance, and maintainability are paramount concerns.
 
+## Design Philosophy and Style
+
+This project embraces a **hybrid programming paradigm** that combines object-oriented and functional programming styles, with an emphasis on policy-based design and modern C++ best practices.
+
+### Core Design Principles
+
+**SOLID Principles (Mandatory)**
+- **Single Responsibility Principle (SRP)**: Each class/module has one reason to change
+- **Open/Closed Principle (OCP)**: Open for extension, closed for modification
+- **Liskov Substitution Principle (LSP)**: Derived classes must be substitutable for base classes
+- **Interface Segregation Principle (ISP)**: Prefer fine-grained interfaces over monolithic ones
+- **Dependency Inversion Principle (DIP)**: Depend on abstractions, not concretions
+
+**Policy-Based Design (Preferred)**
+- Use policy classes as template parameters to customize behavior at compile-time
+- Separate concerns into orthogonal policies (allocation, threading, error handling, etc.)
+- Enable zero-cost abstractions through template instantiation
+- Leverage concepts to constrain and document policy requirements
+- Example: `template<typename ExecutionPolicy, typename ErrorPolicy> class CommandProcessor`
+
+**Object-Oriented Programming**
+- Use classes to encapsulate state and behavior
+- Favor composition over inheritance
+- Apply the Rule of Zero when possible; explicit copy/move semantics when needed
+- Use virtual functions sparingly; prefer static polymorphism via templates when appropriate
+- Create small, focused classes with clear responsibilities
+
+**Functional Programming Style**
+- Prefer immutability and const correctness
+- Use pure functions (no side effects) where practical
+- Leverage ranges and algorithms from `<ranges>` and `<algorithm>`
+- Use `std::function`, lambdas, and higher-order functions for flexible interfaces
+- Favor value semantics and avoid shared mutable state
+- Chain operations using functional composition
+
+**Additional Design Guidelines**
+- **Type Safety**: Use strong types and type aliases to prevent misuse
+- **Compile-Time Programming**: Leverage `constexpr`, `consteval`, and `if constexpr` to move work to compile-time
+- **Error Handling**: Use `std::expected` or `std::optional` for recoverable errors; exceptions for exceptional cases
+- **Minimal Coupling**: Design loosely coupled modules with clear boundaries
+- **Testability**: Write code that is easy to unit test; prefer dependency injection
+- **Performance by Design**: Zero-cost abstractions; measure before optimizing
+- **Documentation**: Self-documenting code through clear naming; use Doxygen comments for public APIs
+
 ## C++ Standards and Best Practices
 
 ### Language Standard
@@ -52,7 +96,7 @@ This is a command shell interpreter written in C++23. Security, performance, and
 ### Copyright and License Headers
 **REQUIRED:** Every source file (.cpp, .hpp, .h) must start with:
 ```cpp
-// Copyright (c) 2025 William Sollers
+// Copyright (c) 2024 William Sollers
 // SPDX-License-Identifier: BSD-2-Clause
 ```
 - Place copyright header at the very top of the file (line 1)
@@ -138,7 +182,6 @@ Follow Clang Hardening Guide:
 - Implement proper exception handling
 - Zero sensitive data before destruction
 - Use constant-time comparison for security-sensitive data
-- check and verify ownership and lifetime issues
 
 ## Project Structure
 
@@ -234,41 +277,6 @@ shell/
 - For performance regression testing
 ```
 
-### Hybrid Standard Library Configuration (Clang)
-
-**CRITICAL:** For Clang builds with fuzzing enabled, use a **hybrid linking approach** to resolve standard library compatibility issues:
-
-#### Problem
-- **libc++** is required for modern C++23 features and compile-time performance
-- **libFuzzer** runtime is built against **libstdc++** on most Linux distributions
-- Direct linking causes symbol conflicts and runtime errors
-
-#### Solution: Hybrid Compile/Link Strategy
-```cmake
-# For fuzz targets only (when ENABLE_FUZZING=ON)
-target_compile_options(fuzz_target PRIVATE
-    -stdlib=libc++              # Use libc++ for compilation (C++23 support)
-)
-target_link_options(fuzz_target PRIVATE
-    -stdlib=libstdc++           # Use libstdc++ for linking (libFuzzer compatibility)
-    -lc++                       # Explicitly link libc++ runtime
-    -fsanitize=fuzzer           # Link libFuzzer (built against libstdc++)
-)
-```
-
-#### When to Apply
-- **Regular builds**: Use pure libc++ (`-stdlib=libc++` for both compile and link)
-- **Fuzz targets only**: Use hybrid approach (libc++ compile, libstdc++ link + explicit libc++ runtime)
-- **Other sanitizers**: Can use pure libc++ approach
-
-#### Rationale
-This hybrid approach allows:
-1. **Compilation**: Full C++23 feature support via libc++ headers
-2. **Linking**: Compatible runtime linking with system libFuzzer
-3. **Runtime**: Explicit libc++ symbols for modern C++ features, libstdc++ base for fuzzer runtime
-
-**Note:** This is a workaround for distribution-specific libFuzzer builds. In ideal environments with libc++-built libFuzzer, use pure libc++ throughout.
-
 ### Utility Scripts
 
 All scripts in `scripts/` directory **MUST** have both:
@@ -293,8 +301,7 @@ Examples of tools that must be in prerequisites:
 - Code quality: clang-tidy, cppcheck, clang-format
 - Testing: lcov (coverage), sanitizers
 - Validation: yamllint, shellcheck
-- REUSE: Python package (reuse) for license compliance
-- SBOM: Syft tool (automated in CI/CD, no local dependencies)
+- SBOM: Python packages (reuse, spdx-tools, ntia-conformance-checker)
 
 Required scripts:
 - `configure.[sh|ps1]` - Configure CMake build
@@ -629,7 +636,7 @@ cmake --install build\windows-msvc-release
   ```bash
   # Check for missing copyright headers
   find src include test bench fuzz -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) \
-    -exec grep -L 'Copyright (c) 2025 William Sollers' {} \;
+    -exec grep -L 'Copyright (c) 2024 William Sollers' {} \;
   ```
 
 ### Pre-Push Checklist
@@ -642,7 +649,7 @@ cmake --install build\windows-msvc-release
 - [ ] No clang-tidy errors
 - [ ] Code follows C++23 best practices
 - [ ] Security vulnerabilities checked
-- [ ] All source files have copyright headers (Copyright (c) 2025 William Sollers + SPDX-License-Identifier: BSD-2-Clause)
+- [ ] All source files have copyright headers (Copyright (c) 2024 William Sollers + SPDX-License-Identifier: BSD-2-Clause)
 - [ ] GitHub Actions workflows validated with VS Code extension (if modified)
 - [ ] Documentation updated (README, QUICKSTART, etc.)
 - [ ] Commit messages are clear and descriptive

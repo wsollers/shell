@@ -50,7 +50,7 @@ public:
     /// @brief Get the shell version
     /// @return Version string
     [[nodiscard]] static constexpr std::string_view version() noexcept {
-        return "0.1.0";
+        return "0.2.1";
     }
     
     /// @brief Validate command syntax

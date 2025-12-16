@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(wshell
-    VERSION 0.2.0
+    VERSION 0.2.1
     DESCRIPTION "A secure command shell interpreter"
     LANGUAGES CXX
 )
@@ -206,6 +206,8 @@ endif()
 add_library(shell_core
   src/main/parser/lexer.cpp
   src/main/parser/parser.cpp
+  src/main/parser/input_source.cpp
+  src/main/parser/output_destination.cpp
   src/main/parser/config.cpp
   src/main/exec/exec_common.cpp
   src/main/exec/exec_linux.cpp
@@ -313,14 +315,10 @@ if(ENABLE_FUZZING)
         add_executable(fuzz_parse fuzz/fuzz_parse.cpp)
         target_link_libraries(fuzz_parse PRIVATE shell_core)
         target_compile_options(fuzz_parse PRIVATE
-            -g
+            -fsanitize=fuzzer,address,undefined
             -fno-omit-frame-pointer
-            -stdlib=libc++
-            -fsanitize=address,undefined
         )
         target_link_options(fuzz_parse PRIVATE
-            -stdlib=libstdc++
-            -lc++
             -fsanitize=fuzzer,address,undefined
         )
         set(WSHELL_FUZZ_ENABLED ON CACHE INTERNAL "Whether fuzz targets are enabled")
@@ -335,39 +333,6 @@ install(TARGETS wshell wshell_lib shell_core
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-
-# ============================
-# Packaging Configuration (CPack)
-# ============================
-set(CPACK_PACKAGE_NAME "wshell")
-set(CPACK_PACKAGE_VENDOR "William Sollers")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A secure command shell interpreter")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-
-# Platform-specific package configuration
-if(WIN32)
-    set(CPACK_GENERATOR "ZIP")
-    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-win64")
-elseif(APPLE)
-    set(CPACK_GENERATOR "TGZ")
-    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-Darwin")
-else()
-    set(CPACK_GENERATOR "TGZ")
-    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-Linux")
-endif()
-
-# Include license
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-
-# Components to package
-set(CPACK_COMPONENTS_ALL applications libraries)
-set(CPACK_COMPONENT_APPLICATIONS_DISPLAY_NAME "Shell Executable")
-set(CPACK_COMPONENT_LIBRARIES_DISPLAY_NAME "Libraries")
-
-include(CPack)
 
 # ============================
 # Summary
@@ -387,7 +352,63 @@ message(STATUS "============================")
 # ============================
 # SBOM Generation (Software Bill of Materials)
 # ============================
-# SBOM generation is now handled by Syft in CI/CD pipelines.
-# To generate SBOM locally, install Syft and run:
-#   syft packages dir:. -o spdx-json=wshell-sbom.spdx.json
-#   syft packages dir:. -o spdx-tag=wshell-sbom.spdx
+option(ENABLE_SBOM "Enable SBOM generation" OFF)
+
+if(ENABLE_SBOM)
+    include(FetchContent)
+    FetchContent_Declare(
+        cmake-sbom
+        GIT_REPOSITORY https://github.com/DEMCON/cmake-sbom.git
+        GIT_TAG main
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(cmake-sbom)
+    
+    # Add cmake-sbom to module path
+    list(APPEND CMAKE_MODULE_PATH "${cmake-sbom_SOURCE_DIR}/cmake")
+    
+    # Generate SBOM in SPDX tag-value format
+    include(sbom)
+    sbom_generate(
+        OUTPUT "${CMAKE_INSTALL_PREFIX}/wshell-sbom.spdx"
+        SUPPLIER "wsollers"
+        SUPPLIER_URL "https://github.com/wsollers/shell"
+    )
+    
+    # Add targets to SBOM
+    sbom_add(TARGET wshell)
+    sbom_add(TARGET wshell_lib)
+    sbom_add(TARGET shell_core)
+    
+    # Finalize SBOM (generates tag-value format, disable verification to avoid issues)
+    sbom_finalize(NO_VERIFY)
+    
+    # Convert SPDX tag-value to JSON using pyspdxtools from venv
+    set(VENV_PYTHON "${CMAKE_SOURCE_DIR}/.venv/bin/python3")
+    install(CODE "
+        message(STATUS \"Converting SBOM to JSON format...\")
+        # Remove invalid ExternalRef lines (cmake-sbom bug with empty CPE)
+        execute_process(
+            COMMAND grep -v \"^ExternalRef: SECURITY cpe23Type \$\" \${CMAKE_INSTALL_PREFIX}/wshell-sbom.spdx
+            OUTPUT_FILE \${CMAKE_INSTALL_PREFIX}/wshell-sbom-fixed.spdx
+            RESULT_VARIABLE _grep_res
+        )
+        execute_process(
+            COMMAND ${VENV_PYTHON} -m spdx_tools.spdx.clitools.pyspdxtools
+                --infile \${CMAKE_INSTALL_PREFIX}/wshell-sbom-fixed.spdx
+                --outfile \${CMAKE_INSTALL_PREFIX}/wshell-sbom.spdx.json
+                --novalidation
+            RESULT_VARIABLE _res
+            OUTPUT_VARIABLE _out
+            ERROR_VARIABLE _err
+        )
+        file(REMOVE \${CMAKE_INSTALL_PREFIX}/wshell-sbom-fixed.spdx)
+        if(NOT \"\${_res}\" STREQUAL \"0\")
+            message(WARNING \"Failed to convert SBOM to JSON: \${_err}\")
+        else()
+            message(STATUS \"SBOM JSON generated: \${CMAKE_INSTALL_PREFIX}/wshell-sbom.spdx.json\")
+        endif()
+    ")
+    
+    message(STATUS "SBOM generation enabled: ${CMAKE_INSTALL_PREFIX}/wshell-sbom.spdx (tag-value) and wshell-sbom.spdx.json (JSON)")
+endif()

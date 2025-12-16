@@ -172,7 +172,7 @@ The configuration system is automatically loaded when wshell starts. You can see
 
 ```bash
 $ wshell echo test
-wshell version 0.1.0
+wshell version 0.2.1
 Loaded 11 variables from /home/user/.wshellrc
 Configuration variables:
   EDITOR=vim

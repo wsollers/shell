@@ -14,7 +14,7 @@ protected:
 TEST_F(ShellCoreTest, VersionIsValid) {
     auto ver = ShellCore::version();
     EXPECT_FALSE(ver.empty());
-    EXPECT_EQ(ver, "0.1.0");
+    EXPECT_EQ(ver, "0.2.1");
 }
 
 TEST_F(ShellCoreTest, ExecuteEmptyCommandFails) {

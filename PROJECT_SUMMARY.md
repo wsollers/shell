@@ -114,7 +114,8 @@ shell-repo/
 
 **SBOM Tools:**
 - reuse: REUSE compliance checking
-- Syft: SBOM generation (automated in CI/CD)
+- spdx-tools: SPDX format conversion and validation
+- ntia-conformance-checker: NTIA compliance verification
 
 ### 5. Configuration System
 **Bash-like Configuration:**
@@ -253,5 +254,5 @@ For questions or issues:
 
 ---
 
-**Copyright (c) 2025 William Sollers**  
+**Copyright (c) 2024 William Sollers**  
 **License: BSD 2-Clause**
