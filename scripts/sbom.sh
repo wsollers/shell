@@ -38,13 +38,15 @@ echo "Generating SBOM using Syft..."
 
 # Check if Syft is installed
 if ! command -v syft >/dev/null 2>&1; then
-    echo "Syft not found. Installing..."
-    curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+    echo "Syft not found. Installing to ~/.local/bin..."
+    mkdir -p ~/.local/bin
+    curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ~/.local/bin
+    export PATH="~/.local/bin:$PATH"
 fi
 
 # Generate SBOM files
-syft packages "dir:build/$PRESET" -o spdx-json=wshell-sbom.spdx.json
-syft packages "dir:build/$PRESET" -o spdx-tag=wshell-sbom.spdx
+syft scan "dir:build/$PRESET" -o spdx-json=wshell-sbom.spdx.json
+syft scan "dir:build/$PRESET" -o spdx-tag-value=wshell-sbom.spdx
 
 echo "SBOM generation complete:"
 echo "  - wshell-sbom.spdx.json (SPDX JSON format)"

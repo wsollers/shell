@@ -87,8 +87,8 @@ jobs:
         VERSION=${GITHUB_REF#refs/tags/}
         
         # Generate SBOM for the built binaries
-        syft packages dir:build/linux-release -o spdx-json=wshell-$VERSION-linux-sbom.spdx.json
-        syft packages dir:build/linux-release -o spdx-tag=wshell-$VERSION-linux-sbom.spdx
+        syft scan dir:build/linux-release -o spdx-json=wshell-$VERSION-linux-sbom.spdx.json
+        syft scan dir:build/linux-release -o spdx-tag-value=wshell-$VERSION-linux-sbom.spdx
 
     - name: Upload Linux Binary and SBOM to Release
       env:

@@ -134,20 +134,9 @@ fi
 # Activate virtual environment and install packages
 source "$VENV_DIR/bin/activate"
 
-echo "Installing Python packages for SBOM and validation tools..."
+echo "Installing Python packages..."
 pip install --upgrade pip
-pip install \
-    reuse \
-    "spdx-tools>=0.8.0" \
-    ntia-conformance-checker \
-    yamllint
-
-echo -e "${GREEN}✓ Installed Python tools:${NC}"
-echo "  - reuse: $(pip show reuse | grep Version | cut -d' ' -f2)"
-echo "  - Syft: $(syft version 2>/dev/null | head -1 | cut -d' ' -f2 || echo 'not installed')"
-echo "  - yamllint: $(pip show yamllint | grep Version | cut -d' ' -f2)"
-
-deactivate
+pip install \\\n    \"reuse>=4.0\"\n\necho \"Installing Syft for SBOM generation...\"\nif ! command -v syft >/dev/null 2>&1; then\n    echo \"Installing Syft to ~/.local/bin...\"\n    mkdir -p ~/.local/bin\n    curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ~/.local/bin\n    export PATH=\"~/.local/bin:$PATH\"\n    echo \"Added ~/.local/bin to PATH for current session\"\nelse\n    echo \"Syft already installed: $(syft version | head -1)\"\nfi\n\necho -e \"${GREEN}✓ Installed tools:${NC}\"\necho \"  - reuse: $(pip show reuse | grep Version | cut -d' ' -f2)\"\necho \"  - Syft: $(syft version 2>/dev/null | head -1 | cut -d' ' -f2 || echo 'not installed')\"\n\ndeactivate
 
 echo ""
 echo -e "${GREEN}=== Prerequisites Installation Complete ===${NC}"
