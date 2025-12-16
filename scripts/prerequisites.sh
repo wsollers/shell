@@ -144,7 +144,7 @@ pip install \
 
 echo -e "${GREEN}✓ Installed Python tools:${NC}"
 echo "  - reuse: $(pip show reuse | grep Version | cut -d' ' -f2)"
-echo "  - SBOM: Syft (install separately: https://github.com/anchore/syft)"
+echo "  - Syft: $(syft version 2>/dev/null | head -1 | cut -d' ' -f2 || echo 'not installed')"
 echo "  - yamllint: $(pip show yamllint | grep Version | cut -d' ' -f2)"
 
 deactivate

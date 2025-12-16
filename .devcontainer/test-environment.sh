@@ -108,14 +108,12 @@ else
 fi
 echo
 
-# Test Python SBOM dependencies
-echo "🐍 Testing Python Dependencies:"
+# Test Python REUSE dependency and Syft
+echo "🐍 Testing Python Dependencies and SBOM Tools:"
 if python_test_output=$(python3 -c "
 import sys
 packages = [
     ('reuse', 'REUSE license compliance'),
-
-    ('ntia_conformance_checker', 'NTIA conformance checker')
 ]
 
 passed = 0
@@ -135,6 +133,23 @@ print(f'\\nPython packages: {passed}/{total} available')
 else
     echo "❌ Python test failed with output:"
     echo "$python_test_output"
+    ((TESTS_FAILED++))
+fi
+
+# Test Syft for SBOM generation
+echo "📦 Testing Syft (SBOM generation):"
+if command -v syft >/dev/null 2>&1; then
+    syft_version=$(syft version | head -1)
+    echo "  ✅ Syft installed: $syft_version"
+    # Test basic functionality
+    if syft_test=$(syft packages dir:/usr/bin --quiet 2>&1 | head -5); then
+        echo "  ✅ Syft can analyze packages"
+    else
+        echo "  ❌ Syft package analysis failed"
+        ((TESTS_FAILED++))
+    fi
+else
+    echo "  ❌ Syft not installed"
     ((TESTS_FAILED++))
 fi
 echo

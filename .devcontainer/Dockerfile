@@ -46,7 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gdb \
     valgrind \
     strace \
-    # Python for SBOM tools
+    # Python for REUSE compliance
     python3.12 \
     python3.12-dev \
     python3-pip \
@@ -69,6 +69,9 @@ COPY requirements-dev.txt /tmp/
 RUN python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements-dev.txt \
     && rm /tmp/requirements-dev.txt
+
+# Install Syft for SBOM generation
+RUN curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
 
 # Add virtual environment to PATH
 ENV PATH="/opt/venv/bin:$PATH"
@@ -107,4 +110,5 @@ RUN echo "=== Development Environment Versions ===" \
     && echo "Clang: $(clang++ --version | head -1)" \
     && echo "CMake: $(cmake --version | head -1)" \
     && echo "Python: $(python3 --version)" \
-    && echo "Git: $(git --version)"
+    && echo "Git: $(git --version)" \
+    && echo "Syft: $(syft version | head -1)"
