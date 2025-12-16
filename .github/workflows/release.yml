@@ -30,7 +30,7 @@ jobs:
       run: |
         # Extract version from tag
         VERSION=${GITHUB_REF#refs/tags/}
-        
+
         # Create release using GitHub CLI
         gh release create "$VERSION" \
           --title "Release $VERSION" \
@@ -115,16 +115,6 @@ jobs:
           exit 1
         fi
 
-    - name: Upload SBOM JSON as Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: build/linux-release/wshell-sbom.spdx.json
-        asset_name: wshell-${{ github.ref_name }}-sbom.spdx.json
-        asset_content_type: application/json
-
     - name: Upload SBOM to Release
       if: success()
       env:
@@ -133,14 +123,14 @@ jobs:
         # Find and upload the generated SBOM files
         SBOM_DIR="build/linux-release/_deps/cmake-sbom-build/example/deploy"
         VERSION=${GITHUB_REF#refs/tags/}
-        
+
         if [ -f "$SBOM_DIR/wshell-sbom.spdx.json" ]; then
           cp "$SBOM_DIR/wshell-sbom.spdx.json" "wshell-$VERSION-sbom.spdx.json"
           gh release upload "$VERSION" "wshell-$VERSION-sbom.spdx.json"
         fi
-        
+
         if [ -f "$SBOM_DIR/wshell-sbom.spdx" ]; then
-          cp "$SBOM_DIR/wshell-sbom.spdx" "wshell-$VERSION-sbom.spdx"  
+          cp "$SBOM_DIR/wshell-sbom.spdx" "wshell-$VERSION-sbom.spdx"
           gh release upload "$VERSION" "wshell-$VERSION-sbom.spdx"
         fi
 
@@ -149,7 +139,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         VERSION=${GITHUB_REF#refs/tags/}
-        
+
         # Find the generated package
         PACKAGE_FILE=$(find build/linux-release -name "wshell-*-Linux.tar.gz" | head -1)
         if [ -n "$PACKAGE_FILE" ]; then
@@ -194,7 +184,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         VERSION=${GITHUB_REF#refs/tags/}
-        
+
         # Find the generated package
         PACKAGE_FILE=$(find build/macos-release -name "wshell-*-Darwin.tar.gz" | head -1)
         if [ -n "$PACKAGE_FILE" ]; then
@@ -239,7 +229,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         $VERSION = $env:GITHUB_REF -replace '^refs/tags/', ''
-        
+
         # Find the generated package
         $PACKAGE_FILE = Get-ChildItem -Path "build/windows-msvc-release" -Name "wshell-*-win64.zip" | Select-Object -First 1
         if ($PACKAGE_FILE) {
