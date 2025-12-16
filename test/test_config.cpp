@@ -192,14 +192,27 @@ TEST_F(ConfigTest, DefaultConfigPath) {
 TEST_F(ConfigTest, FileTooLarge) {
     // Create a file larger than 1MB
     auto path = temp_dir_ / "large_config.rc";
-    std::ofstream file(path);
-    std::string large_content(2'000'000, 'x');  // 2MB
-    file << large_content;
-    file.close();
+    {
+        std::ofstream file(path, std::ios::binary);
+        ASSERT_TRUE(file.is_open()) << "Failed to create test file: " << path;
+        
+        std::string large_content(2'000'000, 'x');  // 2MB
+        file << large_content;
+        file.flush();
+        ASSERT_TRUE(file.good()) << "Failed to write test file content";
+    } // Ensure file is closed and flushed
+    
+    // Verify file exists and has expected size
+    ASSERT_TRUE(std::filesystem::exists(path)) << "Test file was not created";
+    auto file_size = std::filesystem::file_size(path);
+    EXPECT_GE(file_size, 2'000'000) << "Test file is too small: " << file_size;
     
     auto result = Config::load_from_file(path);
-    ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error().code, Config::ErrorCode::FILE_TOO_LARGE);
+    ASSERT_FALSE(result.has_value()) << "Expected load_from_file to fail";
+    EXPECT_EQ(result.error().code, Config::ErrorCode::FILE_TOO_LARGE) 
+        << "Expected FILE_TOO_LARGE but got error code: " 
+        << static_cast<int>(result.error().code) 
+        << " with message: " << result.error().message;
 }
 
 TEST_F(ConfigTest, BashLikeExport) {

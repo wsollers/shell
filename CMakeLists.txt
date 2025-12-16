@@ -337,6 +337,39 @@ install(TARGETS wshell wshell_lib shell_core
 )
 
 # ============================
+# Packaging Configuration (CPack)
+# ============================
+set(CPACK_PACKAGE_NAME "wshell")
+set(CPACK_PACKAGE_VENDOR "William Sollers")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A secure command shell interpreter")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+
+# Platform-specific package configuration
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP")
+    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-win64")
+elseif(APPLE)
+    set(CPACK_GENERATOR "TGZ")
+    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-Darwin")
+else()
+    set(CPACK_GENERATOR "TGZ")
+    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-Linux")
+endif()
+
+# Include license
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+
+# Components to package
+set(CPACK_COMPONENTS_ALL applications libraries)
+set(CPACK_COMPONENT_APPLICATIONS_DISPLAY_NAME "Shell Executable")
+set(CPACK_COMPONENT_LIBRARIES_DISPLAY_NAME "Libraries")
+
+include(CPack)
+
+# ============================
 # Summary
 # ============================
 message(STATUS "=== Configuration Summary ===")
