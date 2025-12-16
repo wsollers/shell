@@ -8,14 +8,16 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 jobs:
   create-release:
     name: Create Release
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/')
-
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
 
     steps:
     - name: Checkout
@@ -23,14 +25,18 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Release ${{ github.ref_name }}
-        draft: false
-        prerelease: false
+      run: |
+        # Extract version from tag
+        VERSION=${GITHUB_REF#refs/tags/}
+        
+        # Create release using GitHub CLI
+        gh release create "$VERSION" \
+          --title "Release $VERSION" \
+          --notes-from-tag \
+          --draft=false \
+          --prerelease=false
 
   build-linux:
     name: Build Linux Release
@@ -119,25 +125,37 @@ jobs:
         asset_name: wshell-${{ github.ref_name }}-sbom.spdx.json
         asset_content_type: application/json
 
-    - name: Upload SBOM SPDX as Release Asset
-      uses: actions/upload-release-asset@v1
+    - name: Upload SBOM to Release
+      if: success()
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: build/linux-release/wshell-sbom.spdx
-        asset_name: wshell-${{ github.ref_name }}-sbom.spdx
-        asset_content_type: text/plain
+      run: |
+        # Find and upload the generated SBOM files
+        SBOM_DIR="build/linux-release/_deps/cmake-sbom-build/example/deploy"
+        VERSION=${GITHUB_REF#refs/tags/}
+        
+        if [ -f "$SBOM_DIR/wshell-sbom.spdx.json" ]; then
+          cp "$SBOM_DIR/wshell-sbom.spdx.json" "wshell-$VERSION-sbom.spdx.json"
+          gh release upload "$VERSION" "wshell-$VERSION-sbom.spdx.json"
+        fi
+        
+        if [ -f "$SBOM_DIR/wshell-sbom.spdx" ]; then
+          cp "$SBOM_DIR/wshell-sbom.spdx" "wshell-$VERSION-sbom.spdx"  
+          gh release upload "$VERSION" "wshell-$VERSION-sbom.spdx"
+        fi
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
+    - name: Upload Linux Binary to Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: build/linux-release/wshell-*-Linux.tar.gz
-        asset_name: wshell-${{ github.ref_name }}-linux-x64.tar.gz
-        asset_content_type: application/gzip
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        
+        # Find the generated package
+        PACKAGE_FILE=$(find build/linux-release -name "wshell-*-Linux.tar.gz" | head -1)
+        if [ -n "$PACKAGE_FILE" ]; then
+          cp "$PACKAGE_FILE" "wshell-$VERSION-linux-x64.tar.gz"
+          gh release upload "$VERSION" "wshell-$VERSION-linux-x64.tar.gz"
+        fi
 
   build-macos:
     name: Build macOS Release
@@ -171,15 +189,18 @@ jobs:
         cd build/macos-release
         cpack -C Release
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
+    - name: Upload macOS Binary to Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: build/macos-release/wshell-*-Darwin.tar.gz
-        asset_name: wshell-${{ github.ref_name }}-macos-x64.tar.gz
-        asset_content_type: application/gzip
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        
+        # Find the generated package
+        PACKAGE_FILE=$(find build/macos-release -name "wshell-*-Darwin.tar.gz" | head -1)
+        if [ -n "$PACKAGE_FILE" ]; then
+          cp "$PACKAGE_FILE" "wshell-$VERSION-macos-x64.tar.gz"
+          gh release upload "$VERSION" "wshell-$VERSION-macos-x64.tar.gz"
+        fi
 
   build-windows:
     name: Build Windows Release
@@ -213,12 +234,15 @@ jobs:
         cd build/windows-msvc-release
         cpack -C Release
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
+    - name: Upload Windows Binary to Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: build/windows-msvc-release/wshell-*-win64.zip
-        asset_name: wshell-${{ github.ref_name }}-windows-x64.zip
-        asset_content_type: application/zip
+      run: |
+        $VERSION = $env:GITHUB_REF -replace '^refs/tags/', ''
+        
+        # Find the generated package
+        $PACKAGE_FILE = Get-ChildItem -Path "build/windows-msvc-release" -Name "wshell-*-win64.zip" | Select-Object -First 1
+        if ($PACKAGE_FILE) {
+          Copy-Item "build/windows-msvc-release/$PACKAGE_FILE" "wshell-$VERSION-windows-x64.zip"
+          gh release upload "$VERSION" "wshell-$VERSION-windows-x64.zip"
+        }
