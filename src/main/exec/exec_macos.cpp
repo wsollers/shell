@@ -78,7 +78,7 @@ static std::vector<char*> make_argv(std::vector<std::string> const& argv, std::v
 class ExecMac final : public Exec::Impl {
 public:
   void init_job_control() override {
-    tty_fd_ = ::STDIN_FILENO;
+    tty_fd_ = STDIN_FILENO;
     interactive_ = ::isatty(tty_fd_);
     if (!interactive_) return;
 
