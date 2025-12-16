@@ -313,10 +313,14 @@ if(ENABLE_FUZZING)
         add_executable(fuzz_parse fuzz/fuzz_parse.cpp)
         target_link_libraries(fuzz_parse PRIVATE shell_core)
         target_compile_options(fuzz_parse PRIVATE
-            -fsanitize=fuzzer,address,undefined
+            -g
             -fno-omit-frame-pointer
+            -stdlib=libc++
+            -fsanitize=address,undefined
         )
         target_link_options(fuzz_parse PRIVATE
+            -stdlib=libstdc++
+            -lc++
             -fsanitize=fuzzer,address,undefined
         )
         set(WSHELL_FUZZ_ENABLED ON CACHE INTERNAL "Whether fuzz targets are enabled")
