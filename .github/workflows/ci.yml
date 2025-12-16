@@ -122,7 +122,32 @@ jobs:
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
         elif [[ "${{ runner.os }}" == "macOS" ]]; then
-          brew install cmake python@3.12
+          brew install cmake
+          # Install LLVM 18 (includes clang-18 and clang++-18)
+          brew install llvm@18 || brew install llvm
+          # Determine correct LLVM path
+          if [[ -d "/opt/homebrew/opt/llvm@18/bin" ]]; then
+            LLVM_BIN="/opt/homebrew/opt/llvm@18/bin"
+            LLVM_PATH="/opt/homebrew/opt/llvm@18/bin"
+          elif [[ -d "/usr/local/opt/llvm@18/bin" ]]; then
+            LLVM_BIN="/usr/local/opt/llvm@18/bin"
+            LLVM_PATH="/usr/local/opt/llvm@18/bin"
+          elif [[ -d "/opt/homebrew/opt/llvm/bin" ]]; then
+            LLVM_BIN="/opt/homebrew/opt/llvm/bin"
+            LLVM_PATH="/opt/homebrew/opt/llvm/bin"
+          else
+            LLVM_BIN="/usr/local/opt/llvm/bin"
+            LLVM_PATH="/usr/local/opt/llvm/bin"
+          fi
+          # Add LLVM to PATH
+          echo "$LLVM_PATH" >> $GITHUB_PATH
+          # Create symlinks for clang-18/clang++-18
+          sudo mkdir -p /usr/local/bin
+          sudo ln -sf "$LLVM_BIN/clang" /usr/local/bin/clang-18
+          sudo ln -sf "$LLVM_BIN/clang++" /usr/local/bin/clang++-18
+          # Verify the symlinks work
+          /usr/local/bin/clang-18 --version
+          /usr/local/bin/clang++-18 --version
         elif [[ "${{ runner.os }}" == "Windows" ]]; then
           # Windows uses MSVC, which comes with Visual Studio
           echo "Using pre-installed MSVC on Windows"
@@ -193,6 +218,8 @@ jobs:
           clang-18 \
           libc++-18-dev \
           libc++abi-18-dev \
+          libclang-rt-18-dev \
+          clang-tools-18 \
           cmake
 
     - name: Configure CMake for Fuzzing
