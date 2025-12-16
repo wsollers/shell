@@ -113,46 +113,50 @@ jobs:
     needs: create-release
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install Dependencies
-      run: |
+      - name: Install Dependencies
+        run: |
           brew install cmake
           # Install LLVM which includes clang and clang++
           brew install llvm@18 || brew install llvm
           # Add LLVM to PATH
           echo "/opt/homebrew/opt/llvm/bin:/usr/local/opt/llvm/bin" >> $GITHUB_PATH
-      run: |
+
+      - name: Configure CMake
+        run: |
           # Use system clang on macOS since clang-18 package name differs
           cmake --preset macos-release \
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++
-      run: |
-        cmake --build build/macos-release --parallel --config Release
 
-    - name: Run Tests
-      run: |
-        cd build/macos-release
-        ctest --output-on-failure --parallel
+      - name: Build
+        run: |
+          cmake --build build/macos-release --parallel --config Release
 
-    - name: Package
-      run: |
-        cd build/macos-release
-        cpack -C Release
+      - name: Run Tests
+        run: |
+          cd build/macos-release
+          ctest --output-on-failure --parallel
 
-    - name: Upload macOS Binary to Release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/}
+      - name: Package
+        run: |
+          cd build/macos-release
+          cpack -C Release
 
-        # Find the generated package
-        PACKAGE_FILE=$(find build/macos-release -name "wshell-*-Darwin.tar.gz" | head -1)
-        if [ -n "$PACKAGE_FILE" ]; then
-          cp "$PACKAGE_FILE" "wshell-$VERSION-macos-x64.tar.gz"
-          gh release upload "$VERSION" "wshell-$VERSION-macos-x64.tar.gz"
-        fi
+      - name: Upload macOS Binary to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+
+          # Find the generated package
+          PACKAGE_FILE=$(find build/macos-release -name "wshell-*-Darwin.tar.gz" | head -1)
+          if [ -n "$PACKAGE_FILE" ]; then
+            cp "$PACKAGE_FILE" "wshell-$VERSION-macos-x64.tar.gz"
+            gh release upload "$VERSION" "wshell-$VERSION-macos-x64.tar.gz"
+          fi
 
   build-windows:
     name: Build Windows Release
@@ -160,39 +164,42 @@ jobs:
     needs: create-release
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup CMake
-      uses: jwlawson/actions-setup-cmake@v2
-      with:
-        cmake-version: '3.25'
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.25'
 
-    - name: Configure CMake
-      run: |
-        cmake --preset windows-msvc-release
+      - name: Configure CMake
+        run: |
+          cmake --preset windows-msvc-release
 
-    - name: Build
-      run: |
-        cmake --build build/windows-msvc-release --parallel --config Release
+      - name: Build
+        run: |
+          cmake --build build/windows-msvc-release --parallel --config Release
 
-    - name: Run Tests
-      run: |
-        cd build/windows-msvc-release
-        ctest --output-on-failure --parallel -C Release
+      - name: Run Tests
+        run: |
+          cd build/windows-msvc-release
+          ctest --output-on-failure --parallel -C Release
 
-    - name: Package
-      run: |
-        cd build/windows-msvc-release
+      - name: Package
+        run: |
+          cd build/windows-msvc-release
           # For Visual Studio generator, we need to specify the config
           cpack -C Release --config CPackConfig.cmake
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        $VERSION = $env:GITHUB_REF -replace '^refs/tags/', ''
 
-        # Find the generated package
-        $PACKAGE_FILE = Get-ChildItem -Path "build/windows-msvc-release" -Name "wshell-*-win64.zip" | Select-Object -First 1
-        if ($PACKAGE_FILE) {
-          Copy-Item "build/windows-msvc-release/$PACKAGE_FILE" "wshell-$VERSION-windows-x64.zip"
-          gh release upload "$VERSION" "wshell-$VERSION-windows-x64.zip"
-        }
+      - name: Upload Windows Binary to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $VERSION = $env:GITHUB_REF -replace '^refs/tags/', ''
+
+          # Find the generated package
+          $PACKAGE_FILE = Get-ChildItem -Path "build/windows-msvc-release" -Name "wshell-*-win64.zip" | Select-Object -First 1
+          if ($PACKAGE_FILE) {
+            Copy-Item "build/windows-msvc-release/$PACKAGE_FILE" "wshell-$VERSION-windows-x64.zip"
+            gh release upload "$VERSION" "wshell-$VERSION-windows-x64.zip"
+          }
