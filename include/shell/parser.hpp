@@ -5,7 +5,6 @@
 
 namespace shell {
 
-// Parser definitions
-// TODO: Define parser interface
+// TODO: Define parser
 
 } // namespace shell

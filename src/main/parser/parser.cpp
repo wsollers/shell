@@ -5,7 +5,6 @@
 
 namespace shell {
 
-// Parser implementation
-// TODO: Implement parsing logic
+// TODO: Implement parser
 
 } // namespace shell

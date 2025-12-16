@@ -5,7 +5,6 @@
 
 namespace shell {
 
-// Lexical analyzer definitions
-// TODO: Define token types and lexer interface
+// TODO: Define lexer
 
 } // namespace shell

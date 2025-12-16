@@ -5,7 +5,6 @@
 
 namespace shell {
 
-// Lexer implementation
-// TODO: Implement lexical analysis
+// TODO: Implement lexer
 
 } // namespace shell
