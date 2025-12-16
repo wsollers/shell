@@ -13,7 +13,6 @@ jobs:
   test-devcontainer:
     name: Test Development Container
     runs-on: ubuntu-latest
-    
     steps:
     - name: Checkout
       uses: actions/checkout@v4
