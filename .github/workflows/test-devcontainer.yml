@@ -1,0 +1,46 @@
+name: Test Development Container
+
+on:
+  push:
+    paths:
+      - '.devcontainer/**'
+      - '.github/workflows/test-devcontainer.yml'
+  pull_request:
+    paths:
+      - '.devcontainer/**'
+
+jobs:
+  test-devcontainer:
+    name: Test Development Container
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Build Development Container
+      run: |
+        cd .devcontainer
+        docker build -t shell-devcontainer .
+
+    - name: Test Environment
+      run: |
+        docker run --rm -v "$PWD:/workspace" \
+          shell-devcontainer /workspace/.devcontainer/test-environment.sh
+
+    - name: Test Project Build
+      run: |
+        docker run --rm -v "$PWD:/workspace" -w /workspace \
+          shell-devcontainer bash -c "
+            cmake --preset linux-debug
+            cmake --build build/linux-debug --parallel
+            cd build/linux-debug && ctest --output-on-failure
+          "
+
+    - name: Test SBOM Generation
+      run: |
+        docker run --rm -v "$PWD:/workspace" -w /workspace \
+          shell-devcontainer bash -c "
+            python3 -c 'import reuse, spdx_tools.spdx, ntia_conformance_checker'
+            echo 'All SBOM tools available'
+          "

@@ -67,13 +67,11 @@ jobs:
         .venv/bin/python3 -m pip install --upgrade pip
         .venv/bin/python3 -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
 
-    - name: Configure CMake
+    - name: Configure and Build with SBOM
       run: |
         PYTHON_EXE="$(pwd)/.venv/bin/python3"
-        cmake --preset linux-release -DPython3_EXECUTABLE="$PYTHON_EXE"
-
-    - name: Build
-      run: |
+        # Use our SBOM script for proper configuration
+        cmake --preset linux-release -DENABLE_SBOM=ON -DPython3_EXECUTABLE="$PYTHON_EXE"
         cmake --build build/linux-release --parallel --config Release
 
     - name: Run Tests

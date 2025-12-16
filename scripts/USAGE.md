@@ -49,6 +49,7 @@ This installs:
 | `benchmark` | Run performance benchmarks | Linux/macOS/Windows |
 | `coverage` | Generate code coverage reports | Linux/macOS |
 | `fuzz` | Run fuzz testing | Linux/macOS/Windows |
+| `sbom` | Generate Software Bill of Materials | Linux/macOS/Windows |
 | `common.sh` | Shared utilities (sourced by other scripts) | Linux/macOS |
 
 ---
@@ -257,6 +258,44 @@ Examples:
 **Requirements:**
 - Project configured with fuzz preset (`--fuzz` or `-Fuzz`)
 - Clang compiler with libFuzzer support
+
+### 📋 SBOM Scripts
+
+Generate Software Bill of Materials (SBOM) for security and compliance.
+
+**Linux/macOS:**
+```bash
+./scripts/sbom.sh [PRESET]
+
+Arguments:
+  PRESET     CMake preset to build with SBOM (default: linux-release)
+
+Examples:
+  ./scripts/sbom.sh                    # Generate SBOM for linux-release
+  ./scripts/sbom.sh linux-debug       # Generate SBOM for linux-debug
+```
+
+**Windows:**
+```powershell
+.\scripts\sbom.ps1 [OPTIONS]
+
+Parameters:
+  -Preset NAME       CMake preset to build with SBOM (default: windows-msvc-release)
+  -Help              Show this help
+
+Examples:
+  .\scripts\sbom.ps1                                    # Generate SBOM for windows-msvc-release
+  .\scripts\sbom.ps1 -Preset "windows-msvc-debug"      # Generate SBOM for debug build
+```
+
+**Requirements:**
+- Python 3.12+ with pip
+- Python packages: reuse, spdx-tools, ntia-conformance-checker
+- Run `./scripts/prerequisites.sh` or `.\scripts\prerequisites.ps1` to install dependencies
+
+**Output Files:**
+- `wshell-sbom.spdx.json` - SBOM in JSON format
+- `wshell-sbom.spdx` - SBOM in tag-value format
 
 ---
 

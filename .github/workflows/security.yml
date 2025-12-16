@@ -56,7 +56,8 @@ jobs:
 
     - name: Build for Analysis
       run: |
-        cmake --preset linux-release -DENABLE_SBOM=OFF
+        # Configure with minimal features for security analysis
+        cmake --preset linux-release -DENABLE_TESTING=OFF -DENABLE_FUZZING=OFF -DENABLE_BENCHMARKS=OFF
         cmake --build build/linux-release --parallel
 
     - name: Perform CodeQL Analysis
@@ -146,7 +147,20 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cmake --preset windows-msvc-release -DENABLE_SBOM=OFF
+        # Configure for Windows analysis with minimal features and our fixed exec implementation
+        cmake --preset windows-msvc-release -DENABLE_TESTING=OFF -DENABLE_FUZZING=OFF -DENABLE_BENCHMARKS=OFF
+
+    - name: Debug Build Configuration
+      run: |
+        echo "Build directory contents:"
+        ls -la build/windows-msvc-release/ || dir build\windows-msvc-release
+        echo "CMake cache contents:"
+        type build\windows-msvc-release\CMakeCache.txt | findstr "CMAKE_BUILD_TYPE\|ENABLE_" || echo "Cache not found"
+
+    - name: Build Project First
+      run: |
+        # Build the project first to ensure all sources compile
+        cmake --build build/windows-msvc-release --config Release --parallel
 
     - name: Run Microsoft C++ Code Analysis
       uses: microsoft/msvc-code-analysis-action@v0.1.1

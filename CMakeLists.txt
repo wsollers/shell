@@ -33,7 +33,7 @@ option(ENABLE_COVERAGE "Enable code coverage" OFF)
 option(ENABLE_SANITIZERS "Enable sanitizers (ASan, UBSan, etc.)" OFF)
 option(WSHELL_FORCE_LIBCXX "Force Clang libc++/libc++abi on non-MSVC builds" OFF)
 
-if(NOT MSVC AND WSHELL_FORCE_LIBCXX)
+if(NOT MSVC AND WSHELL_FORCE_LIBCXX AND NOT ENABLE_FUZZING)
   add_compile_options(-stdlib=libc++)
   add_link_options(-stdlib=libc++ -lc++abi)
 endif()
@@ -350,7 +350,7 @@ message(STATUS "============================")
 # ============================
 # SBOM Generation (Software Bill of Materials)
 # ============================
-option(ENABLE_SBOM "Enable SBOM generation" ON)
+option(ENABLE_SBOM "Enable SBOM generation" OFF)
 
 if(ENABLE_SBOM)
     include(FetchContent)

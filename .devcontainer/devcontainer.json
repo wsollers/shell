@@ -1,0 +1,45 @@
+{
+  "name": "C++23 Shell Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "UBUNTU_VERSION": "24.04",
+      "CLANG_VERSION": "18",
+      "CMAKE_VERSION": "3.25",
+      "PYTHON_VERSION": "3.12"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "ppa": true,
+      "version": "latest"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake",
+        "ms-vscode.hexeditor",
+        "ms-python.python",
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
+      ],
+      "settings": {
+        "C_Cpp.default.compilerPath": "/usr/bin/clang++-18",
+        "C_Cpp.default.cppStandard": "c++23",
+        "C_Cpp.default.intelliSenseMode": "linux-clang-x64",
+        "cmake.configureArgs": ["-DCMAKE_CXX_COMPILER=clang++-18"]
+      }
+    }
+  },
+  "forwardPorts": [],
+  "postCreateCommand": "echo 'Welcome to C++23 Shell Development Environment!' && ./scripts/prerequisites.sh --skip-system-deps",
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  ]
+}
