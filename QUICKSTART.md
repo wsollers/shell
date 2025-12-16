@@ -18,7 +18,8 @@
 - Clang 18+ (Linux/macOS) or Visual Studio 2022 Build Tools (Windows)
 - CMake 3.20+
 - Python 3.12+ with virtual environment
-- SBOM tools: reuse, spdx-tools, ntia-conformance-checker
+- REUSE tool: reuse
+- SBOM generation: Syft (automated in CI/CD)
 - Build essentials and platform-specific libraries
 
 **Manual installation:**

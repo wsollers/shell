@@ -1,8 +1,6 @@
 # Python dependencies for C++23 Shell project development
-# SBOM (Software Bill of Materials) tools - pinned for reproducibility
+# REUSE compliance checking
 reuse==4.0.3
-spdx-tools==0.8.2
-ntia-conformance-checker==3.0.0
 
 # Development and testing tools - allow floating versions to avoid system conflicts
 pytest

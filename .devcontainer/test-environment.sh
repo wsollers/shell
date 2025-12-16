@@ -114,7 +114,7 @@ if python_test_output=$(python3 -c "
 import sys
 packages = [
     ('reuse', 'REUSE license compliance'),
-    ('spdx_tools', 'SPDX SBOM tools'),
+
     ('ntia_conformance_checker', 'NTIA conformance checker')
 ]
 

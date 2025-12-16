@@ -18,7 +18,8 @@ This installs:
 - Clang 18+ (Linux) or Visual Studio 2022 (Windows)
 - CMake 3.20+
 - Python 3.12+
-- SBOM tools: reuse, spdx-tools, ntia-conformance-checker
+- REUSE tool: reuse
+- SBOM generation: Syft (automated in CI/CD)
 - Build tools and libraries
 
 ## Quick Start
@@ -290,7 +291,8 @@ Examples:
 
 **Requirements:**
 - Python 3.12+ with pip
-- Python packages: reuse, spdx-tools, ntia-conformance-checker
+- REUSE compliance: reuse
+- SBOM generation: Syft (CI/CD only, no local setup required)
 - Run `./scripts/prerequisites.sh` or `.\scripts\prerequisites.ps1` to install dependencies
 
 **Output Files:**

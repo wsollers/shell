@@ -144,8 +144,7 @@ pip install \
 
 echo -e "${GREEN}✓ Installed Python tools:${NC}"
 echo "  - reuse: $(pip show reuse | grep Version | cut -d' ' -f2)"
-echo "  - spdx-tools: $(pip show spdx-tools | grep Version | cut -d' ' -f2)"
-echo "  - ntia-conformance-checker: $(pip show ntia-conformance-checker | grep Version | cut -d' ' -f2)"
+echo "  - SBOM: Syft (install separately: https://github.com/anchore/syft)"
 echo "  - yamllint: $(pip show yamllint | grep Version | cut -d' ' -f2)"
 
 deactivate

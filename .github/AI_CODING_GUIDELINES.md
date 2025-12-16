@@ -293,7 +293,8 @@ Examples of tools that must be in prerequisites:
 - Code quality: clang-tidy, cppcheck, clang-format
 - Testing: lcov (coverage), sanitizers
 - Validation: yamllint, shellcheck
-- SBOM: Python packages (reuse, spdx-tools, ntia-conformance-checker)
+- REUSE: Python package (reuse) for license compliance
+- SBOM: Syft tool (automated in CI/CD, no local dependencies)
 
 Required scripts:
 - `configure.[sh|ps1]` - Configure CMake build

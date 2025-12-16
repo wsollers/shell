@@ -39,10 +39,11 @@ jobs:
             cd build/linux-debug && ctest --output-on-failure
           "
 
-    - name: Test SBOM Generation
+    - name: Test REUSE Compliance
       run: |
         docker run --rm -v "$PWD:/workspace" -w /workspace \
           shell-devcontainer bash -c "
-            python3 -c 'import reuse, spdx_tools.spdx, ntia_conformance_checker'
-            echo 'All SBOM tools available'
+            python3 -c 'import reuse'
+            echo 'REUSE compliance tool available'
+            # Note: SBOM generation is now handled by Syft in CI/CD
           "

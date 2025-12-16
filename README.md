@@ -44,7 +44,8 @@ This installs:
 - **Compiler**: Clang 18+ (Linux/macOS) or Visual Studio 2022 Build Tools (Windows)
 - **Build Tools**: CMake 3.20+, Ninja
 - **Python**: 3.12+ with virtual environment
-- **SBOM Tools**: reuse, spdx-tools, ntia-conformance-checker (for software bill of materials)
+- **REUSE Compliance**: reuse (for license compliance checking)
+- **SBOM Generation**: Syft by Anchore (automated in CI/CD)
 - **Development Libraries**: libc++ (Linux), platform-specific dependencies
 
 ### Development Environments

@@ -79,7 +79,18 @@ jobs:
         cd build/linux-release
         cpack -C Release
 
-    - name: Upload Linux Binary to Release
+    - name: Generate SBOM
+      run: |
+        # Install Syft
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        
+        VERSION=${GITHUB_REF#refs/tags/}
+        
+        # Generate SBOM for the built binaries
+        syft packages dir:build/linux-release -o spdx-json=wshell-$VERSION-linux-sbom.spdx.json
+        syft packages dir:build/linux-release -o spdx-tag=wshell-$VERSION-linux-sbom.spdx
+
+    - name: Upload Linux Binary and SBOM to Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -91,6 +102,10 @@ jobs:
           cp "$PACKAGE_FILE" "wshell-$VERSION-linux-x64.tar.gz"
           gh release upload "$VERSION" "wshell-$VERSION-linux-x64.tar.gz"
         fi
+        
+        # Upload SBOM files
+        gh release upload "$VERSION" "wshell-$VERSION-linux-sbom.spdx.json"
+        gh release upload "$VERSION" "wshell-$VERSION-linux-sbom.spdx"
 
   build-macos:
     name: Build macOS Release
