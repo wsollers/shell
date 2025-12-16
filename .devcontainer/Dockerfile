@@ -33,12 +33,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install language runtimes and compilers (occasionally change)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Clang with C++23 support
+    # Clang with C++23 support + fuzzing/sanitizer runtimes
     clang-18 \
     clang++-18 \
+    clang-tools-18 \
     # libc++ for C++23 features like std::expected  
     libc++-18-dev \
     libc++abi-18-dev \
+    # Clang runtime libraries for fuzzing and sanitizers
+    libclang-rt-18-dev \
     # Development tools (use latest stable versions)
     gdb \
     valgrind \
