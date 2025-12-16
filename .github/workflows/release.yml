@@ -73,11 +73,9 @@ jobs:
         .venv/bin/python3 -m pip install --upgrade pip
         .venv/bin/python3 -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
 
-    - name: Configure and Build with SBOM
+    - name: Configure and Build
       run: |
-        PYTHON_EXE="$(pwd)/.venv/bin/python3"
-        # Use our SBOM script for proper configuration
-        cmake --preset linux-release -DENABLE_SBOM=ON -DPython3_EXECUTABLE="$PYTHON_EXE"
+        cmake --preset linux-release
         cmake --build build/linux-release --parallel --config Release
 
     - name: Run Tests
@@ -89,50 +87,6 @@ jobs:
       run: |
         cd build/linux-release
         cpack -C Release
-
-    - name: Generate SBOM
-      run: |
-        echo "Installing to generate SBOM..."
-        source .venv/bin/activate
-        cmake --install build/linux-release
-        deactivate
-
-        # Find the SBOM files
-        SBOM_DIR="build/linux-release/_deps/cmake-sbom-build/example/deploy"
-
-        echo "Checking for SBOM files in $SBOM_DIR..."
-        ls -la "$SBOM_DIR"/ || true
-
-        if [ -f "$SBOM_DIR/wshell-sbom.spdx.json" ]; then
-          echo "✅ SBOM JSON generated successfully"
-          echo "SBOM size: $(wc -c < "$SBOM_DIR/wshell-sbom.spdx.json") bytes"
-
-          # Copy to release directory
-          cp "$SBOM_DIR/wshell-sbom.spdx.json" build/linux-release/wshell-sbom.spdx.json
-          cp "$SBOM_DIR/wshell-sbom.spdx" build/linux-release/wshell-sbom.spdx
-        else
-          echo "⚠️  SBOM JSON file not found"
-          exit 1
-        fi
-
-    - name: Upload SBOM to Release
-      if: success()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Find and upload the generated SBOM files
-        SBOM_DIR="build/linux-release/_deps/cmake-sbom-build/example/deploy"
-        VERSION=${GITHUB_REF#refs/tags/}
-
-        if [ -f "$SBOM_DIR/wshell-sbom.spdx.json" ]; then
-          cp "$SBOM_DIR/wshell-sbom.spdx.json" "wshell-$VERSION-sbom.spdx.json"
-          gh release upload "$VERSION" "wshell-$VERSION-sbom.spdx.json"
-        fi
-
-        if [ -f "$SBOM_DIR/wshell-sbom.spdx" ]; then
-          cp "$SBOM_DIR/wshell-sbom.spdx" "wshell-$VERSION-sbom.spdx"
-          gh release upload "$VERSION" "wshell-$VERSION-sbom.spdx"
-        fi
 
     - name: Upload Linux Binary to Release
       env:
