@@ -30,38 +30,38 @@ jobs:
         language: ['cpp']
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
-      with:
-        languages: ${{ matrix.language }}
-        config-file: ./.github/codeql/codeql-config.yml
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql/codeql-config.yml
 
-    - name: Clean Build Directory
-      run: |
-        # Remove any existing build directories that might confuse CodeQL
-        rm -rf build/
-        rm -rf _deps/
+      - name: Clean Build Directory
+        run: |
+          # Remove any existing build directories that might confuse CodeQL
+          rm -rf build/
+          rm -rf _deps/
 
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          clang-18 \
-          libc++-18-dev \
-          libc++abi-18-dev \
-          cmake
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang-18 \
+            libc++-18-dev \
+            libc++abi-18-dev \
+            cmake
 
-    - name: Build for Analysis
-      run: |
-        # Configure with minimal features for security analysis
-        cmake --preset linux-release -DENABLE_TESTING=OFF -DENABLE_FUZZING=OFF -DENABLE_BENCHMARKS=OFF
-        cmake --build build/linux-release --parallel
+      - name: Build for Analysis
+        run: |
+          # Configure with minimal features for security analysis
+          cmake --preset linux-release -DENABLE_TESTING=OFF -DENABLE_FUZZING=OFF -DENABLE_BENCHMARKS=OFF
+          cmake --build build/linux-release --parallel
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
 
   dependency-review:
     name: Dependency Review
@@ -69,11 +69,11 @@ jobs:
     if: github.event_name == 'pull_request'
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v4
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
 
   vulnerability-scan:
     name: Vulnerability Scanning
@@ -84,22 +84,22 @@ jobs:
       security-events: write
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@0.28.0
-      with:
-        scan-type: 'fs'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        skip-dirs: 'build/**/_deps/**,**/build/**/_deps/**,_deps/**,**/_deps/**'
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          skip-dirs: 'build/**/_deps/**,**/build/**/_deps/**,_deps/**,**/_deps/**'
 
-    - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v4
-      if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          sarif_file: 'trivy-results.sarif'
 
   devskim-analysis:
     name: Microsoft DevSkim Analysis
@@ -110,23 +110,23 @@ jobs:
       security-events: write
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Run DevSkim scanner
-      uses: microsoft/DevSkim-Action@v1
-      with:
-        ignore-globs: |
-          build/**/_deps/**
-          **/build/**/_deps/**
-          _deps/**
-          **/_deps/**
+      - name: Run DevSkim scanner
+        uses: microsoft/DevSkim-Action@v1
+        with:
+          ignore-globs: |
+            build/**/_deps/**
+            **/build/**/_deps/**
+            _deps/**
+            **/_deps/**
 
-    - name: Upload DevSkim scan results
-      uses: github/codeql-action/upload-sarif@v4
-      if: always() && hashFiles('devskim-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-      with:
-        sarif_file: devskim-results.sarif
+      - name: Upload DevSkim scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('devskim-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          sarif_file: devskim-results.sarif
 
   cpp-code-analysis:
     name: Microsoft C++ Code Analysis
@@ -137,45 +137,45 @@ jobs:
       security-events: write
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup CMake
-      uses: jwlawson/actions-setup-cmake@v2
-      with:
-        cmake-version: '3.25'
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.25'
 
-    - name: Configure CMake
-      run: |
-        # Configure for Windows analysis with minimal features and our fixed exec implementation
-        cmake --preset windows-msvc-release -DENABLE_TESTING=OFF -DENABLE_FUZZING=OFF -DENABLE_BENCHMARKS=OFF
+      - name: Configure CMake
+        run: |
+          # Configure for Windows analysis with minimal features and our fixed exec implementation
+          cmake --preset windows-msvc-release -DENABLE_TESTING=OFF -DENABLE_FUZZING=OFF -DENABLE_BENCHMARKS=OFF
 
-    - name: Debug Build Configuration
-      run: |
-        echo "Build directory contents:"
-        dir build\windows-msvc-release
-        echo "CMake cache contents:"
-        type build\windows-msvc-release\CMakeCache.txt | findstr "CMAKE_BUILD_TYPE ENABLE_" 2>nul || echo "Cache not found"
+      - name: Debug Build Configuration
+        run: |
+          echo "Build directory contents:"
+          dir build\windows-msvc-release
+          echo "CMake cache contents:"
+          type build\windows-msvc-release\CMakeCache.txt | findstr "CMAKE_BUILD_TYPE ENABLE_" 2>nul || echo "Cache not found"
 
-    - name: Build Project First
-      run: |
-        # Build the project first to ensure all sources compile
-        cmake --build build/windows-msvc-release --config Release --parallel
+      - name: Build Project First
+        run: |
+          # Build the project first to ensure all sources compile
+          cmake --build build/windows-msvc-release --config Release --parallel
 
-    - name: Run Microsoft C++ Code Analysis
-      uses: microsoft/msvc-code-analysis-action@v0.1.1
-      id: run-analysis
-      with:
-        cmakeBuildDirectory: build/windows-msvc-release
-        buildConfiguration: Release
-        ruleset: NativeRecommendedRules.ruleset
-        excludePaths: |
-          build/**/_deps/**
-          **/build/**/_deps/**
-          _deps/**
-          **/_deps/**
+      - name: Run Microsoft C++ Code Analysis
+        uses: microsoft/msvc-code-analysis-action@v0.1.1
+        id: run-analysis
+        with:
+          cmakeBuildDirectory: build/windows-msvc-release
+          buildConfiguration: Release
+          ruleset: NativeRecommendedRules.ruleset
+          excludePaths: |
+            build/**/_deps/**
+            **/build/**/_deps/**
+            _deps/**
+            **/_deps/**
 
-    - name: Upload SARIF to GitHub
+      - name: Upload SARIF to GitHub
       uses: github/codeql-action/upload-sarif@v4
       if: always() && steps.run-analysis.outputs.sarif != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       with:
@@ -191,26 +191,25 @@ jobs:
       id-token: write
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Azure Login
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Run Microsoft Security DevOps
+        uses: microsoft/security-devops-action@v1.6.0
+        id: msdo
+        continue-on-error: true
+        env:
+          # Force basic configuration without platform-specific tools
+          MSDO_DOCKERFILE_PATH: ""
 
-    - name: Run Microsoft Security DevOps
-      uses: microsoft/security-devops-action@v1.6.0
-      id: msdo
-      continue-on-error: true
-      env:
-        # Force basic configuration without platform-specific tools
-        MSDO_DOCKERFILE_PATH: ""
-
-    - name: Debug Microsoft Security DevOps output
-      if: always()
-      run: |
+      - name: Debug Microsoft Security DevOps output
+        if: always()
+        run: |
         echo "MSDO step outcome: ${{ steps.msdo.outcome }}"
         echo "SARIF file: ${{ steps.msdo.outputs.sarifFile }}"
         if [ -f "${{ steps.msdo.outputs.sarifFile }}" ]; then
@@ -246,16 +245,16 @@ jobs:
       #       }
       #     }
 
-    - name: Upload alerts to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v4
-      if: success() && steps.msdo.outputs.sarifFile != '' &&
-        hashFiles(steps.msdo.outputs.sarifFile) != '' &&
-        (github.event_name != 'pull_request' ||
-        github.event.pull_request.head.repo.full_name == github.repository)
-      with:
-        sarif_file: ${{ steps.msdo.outputs.sarifFile }}
+      - name: Upload alerts to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: success() && steps.msdo.outputs.sarifFile != '' &&
+          hashFiles(steps.msdo.outputs.sarifFile) != '' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          sarif_file: ${{ steps.msdo.outputs.sarifFile }}
 
-    - name: Upload to Azure Defender for Cloud (if Azure credentials available)
+      - name: Upload to Azure Defender for Cloud (if Azure credentials available)
       if: success()
       run: |
         if [ -n "$AZURE_CREDENTIALS" ]; then
@@ -272,11 +271,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install PowerShell
-      run: |
+      - name: Install PowerShell
+        run: |
         sudo apt-get update
         sudo apt-get install -y wget apt-transport-https software-properties-common
         wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
@@ -284,36 +283,36 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y powershell
 
-    - name: Install PSScriptAnalyzer
-      shell: pwsh
-      run: |
-        Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
 
-    - name: Run PSScriptAnalyzer on PowerShell scripts
-      shell: pwsh
-      run: |
-        $results = @()
-        Get-ChildItem -Path "./scripts" -Filter "*.ps1" | ForEach-Object {
-          $analysis = Invoke-ScriptAnalyzer -Path $_.FullName -Severity @('Error', 'Warning')
-          $results += $analysis
-        }
-        if ($results.Count -gt 0) {
-          $results | Format-Table -AutoSize
-          Write-Host "::warning::Found $($results.Count) PSScriptAnalyzer issues"
-        } else {
-          Write-Host "No PSScriptAnalyzer issues found"
-        }
+      - name: Run PSScriptAnalyzer on PowerShell scripts
+        shell: pwsh
+        run: |
+          $results = @()
+          Get-ChildItem -Path "./scripts" -Filter "*.ps1" | ForEach-Object {
+            $analysis = Invoke-ScriptAnalyzer -Path $_.FullName -Severity @('Error', 'Warning')
+            $results += $analysis
+          }
+          if ($results.Count -gt 0) {
+            $results | Format-Table -AutoSize
+            Write-Host "::warning::Found $($results.Count) PSScriptAnalyzer issues"
+          } else {
+            Write-Host "No PSScriptAnalyzer issues found"
+          }
 
-    - name: Install ShellCheck for Bash analysis
-      run: |
-        sudo apt-get install -y shellcheck
+      - name: Install ShellCheck for Bash analysis
+        run: |
+          sudo apt-get install -y shellcheck
 
-    - name: Run ShellCheck on Bash scripts
-      run: |
-        echo "Running ShellCheck on Bash scripts..."
-        find ./scripts -name "*.sh" -type f | while read -r script; do
-          echo "Analyzing: $script"
-          if ! shellcheck "$script"; then
-            echo "::warning::ShellCheck found issues in $script"
-          fi
-        done
+      - name: Run ShellCheck on Bash scripts
+        run: |
+          echo "Running ShellCheck on Bash scripts..."
+          find ./scripts -name "*.sh" -type f | while read -r script; do
+            echo "Analyzing: $script"
+            if ! shellcheck "$script"; then
+              echo "::warning::ShellCheck found issues in $script"
+            fi
+          done
