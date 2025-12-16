@@ -31,6 +31,9 @@ jobs:
       run: |
         docker run --rm -v "$PWD:/workspace" -w /workspace \
           shell-devcontainer bash -c "
+            # Copy to writable directory
+            cp -r /workspace /tmp/test-workspace
+            cd /tmp/test-workspace
             cmake --preset linux-debug
             cmake --build build/linux-debug --parallel
             cd build/linux-debug && ctest --output-on-failure
