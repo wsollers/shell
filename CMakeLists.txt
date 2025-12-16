@@ -310,19 +310,6 @@ set(WSHELL_FUZZ_ENABLED OFF CACHE INTERNAL "Whether fuzz targets are enabled")
 if(ENABLE_FUZZING)
     message(STATUS "Fuzzing: requested (ENABLE_FUZZING=ON) - configuring fuzz targets...")
     add_subdirectory(fuzz)
-    # Also add new ChatGPT fuzz files directly
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_executable(fuzz_parse fuzz/fuzz_parse.cpp)
-        target_link_libraries(fuzz_parse PRIVATE shell_core)
-        target_compile_options(fuzz_parse PRIVATE
-            -fsanitize=fuzzer,address,undefined
-            -fno-omit-frame-pointer
-        )
-        target_link_options(fuzz_parse PRIVATE
-            -fsanitize=fuzzer,address,undefined
-        )
-        set(WSHELL_FUZZ_ENABLED ON CACHE INTERNAL "Whether fuzz targets are enabled")
-    endif()
 endif()
 
 # ============================

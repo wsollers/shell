@@ -72,15 +72,15 @@ jobs:
             preset: "linux-debug"
             build_type: "Debug"
 
-          # macOS builds (commented out for review)
-          # - name: "macOS Release (Clang + libc++)"
-          #   os: macos-14
-          #   preset: "macos-release"
-          #   build_type: "Release"
-          # - name: "macOS Debug (Clang + libc++)"
-          #   os: macos-14
-          #   preset: "macos-debug"
-          #   build_type: "Debug"
+          # macOS builds
+          - name: "macOS Release (Clang + libc++)"
+            os: macos-14
+            preset: "macos-release"
+            build_type: "Release"
+          - name: "macOS Debug (Clang + libc++)"
+            os: macos-14
+            preset: "macos-debug"
+            build_type: "Debug"
 
           # Windows builds
           - name: "Windows Release (MSVC)"

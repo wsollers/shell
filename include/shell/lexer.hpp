@@ -1,44 +1,11 @@
+// Copyright (c) 2024 William Sollers
+// SPDX-License-Identifier: BSD-2-Clause
+
 #pragma once
-#include <cstddef>
-#include <cstdint>
-#include <string>
-#include <string_view>
-#include <vector>
 
 namespace shell {
 
-enum class TokKind : std::uint8_t {
-  WORD,
-  PIPE,       // |
-  AND_IF,     // &&
-  OR_IF,      // ||
-  SEMI,       // ;
-  AMP,        // &
-  R_OUT,      // >
-  R_OUT_APP,  // >>
-  R_IN,       // <
-  HEREDOC,    // <<
-  EOL,
-  END,
-  ERROR
-};
-
-struct Token {
-  TokKind kind{};
-  std::size_t pos{};         // byte offset
-  std::string text{};        // for Word only (already unescaped/unquoted in v0)
-  std::string error_msg{};   // for Error
-};
-
-struct LexResult {
-  std::vector<Token> toks;
-  bool ok{true};
-};
-
-struct Lexer {
-  using char_t = char; // your future char_t can replace this
-
-  LexResult lex(std::string_view input) const;
-};
+// Lexical analyzer definitions
+// TODO: Define token types and lexer interface
 
 } // namespace shell

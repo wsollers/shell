@@ -69,3 +69,9 @@ add_executable(fuzz_shell_core fuzz_shell_core.cpp)
 target_link_libraries(fuzz_shell_core PRIVATE wshell_lib)
 target_compile_options(fuzz_shell_core PRIVATE ${WSHELL_FUZZ_COMPILE_OPTS})
 target_link_options(fuzz_shell_core PRIVATE ${WSHELL_FUZZ_LINK_OPTS})
+
+# Fuzz: parser
+add_executable(fuzz_parse fuzz_parse.cpp)
+target_link_libraries(fuzz_parse PRIVATE shell_core)
+target_compile_options(fuzz_parse PRIVATE ${WSHELL_FUZZ_COMPILE_OPTS})
+target_link_options(fuzz_parse PRIVATE ${WSHELL_FUZZ_LINK_OPTS})

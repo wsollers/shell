@@ -1,26 +1,11 @@
+// Copyright (c) 2024 William Sollers
+// SPDX-License-Identifier: BSD-2-Clause
+
 #pragma once
-#include "shell/ast.hpp"
-#include "shell/lexer.hpp"
-#include <optional>
-#include <string>
-#include <source_location>
 
 namespace shell {
 
-struct ParseError {
-  std::size_t pos{};
-  std::string msg;
-  std::source_location where;
-};
-
-struct ParseResult {
-  Arena arena;
-  Sequence seq;
-  std::optional<ParseError> err;
-};
-
-struct Parser {
-  ParseResult parse(std::vector<Token> const& toks) const;
-};
+// Parser definitions
+// TODO: Define parser interface
 
 } // namespace shell
