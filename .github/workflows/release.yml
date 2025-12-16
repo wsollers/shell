@@ -121,15 +121,23 @@ jobs:
           brew install cmake
           # Install LLVM 18 (includes clang-18 and clang++-18)
           brew install llvm@18 || brew install llvm
-          # Add LLVM to PATH
-          echo "/opt/homebrew/opt/llvm/bin:/usr/local/opt/llvm/bin" >> $GITHUB_PATH
-          # Ensure clang-18 and clang++-18 are available
-          if [[ -d "/opt/homebrew/opt/llvm/bin" ]]; then
+          # Determine correct LLVM path
+          if [[ -d "/opt/homebrew/opt/llvm@18/bin" ]]; then
+            LLVM_BIN="/opt/homebrew/opt/llvm@18/bin"
+            LLVM_PATH="/opt/homebrew/opt/llvm@18/bin"
+          elif [[ -d "/usr/local/opt/llvm@18/bin" ]]; then
+            LLVM_BIN="/usr/local/opt/llvm@18/bin"
+            LLVM_PATH="/usr/local/opt/llvm@18/bin"
+          elif [[ -d "/opt/homebrew/opt/llvm/bin" ]]; then
             LLVM_BIN="/opt/homebrew/opt/llvm/bin"
+            LLVM_PATH="/opt/homebrew/opt/llvm/bin"
           else
             LLVM_BIN="/usr/local/opt/llvm/bin"
+            LLVM_PATH="/usr/local/opt/llvm/bin"
           fi
-          # Create symlinks if they don't exist
+          # Add LLVM to PATH
+          echo "$LLVM_PATH" >> $GITHUB_PATH
+          # Create symlinks for clang-18/clang++-18
           sudo mkdir -p /usr/local/bin
           sudo ln -sf "$LLVM_BIN/clang" /usr/local/bin/clang-18
           sudo ln -sf "$LLVM_BIN/clang++" /usr/local/bin/clang++-18
