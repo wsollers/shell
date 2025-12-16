@@ -59,19 +59,10 @@ jobs:
           clang++-18 \
           libc++-18-dev \
           libc++abi-18-dev \
-          cmake \
-          python3 \
-          python3-pip \
-          python3-venv
+          cmake
         # Ensure clang-18 can find libc++ headers
         sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
-
-    - name: Setup Python Environment for SBOM
-      run: |
-        python3 -m venv .venv
-        .venv/bin/python3 -m pip install --upgrade pip
-        .venv/bin/python3 -m pip install reuse "spdx-tools>=0.8.0" ntia-conformance-checker
 
     - name: Configure and Build
       run: |
