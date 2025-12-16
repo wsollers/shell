@@ -210,18 +210,18 @@ jobs:
       - name: Debug Microsoft Security DevOps output
         if: always()
         run: |
-        echo "MSDO step outcome: ${{ steps.msdo.outcome }}"
-        echo "SARIF file: ${{ steps.msdo.outputs.sarifFile }}"
-        if [ -f "${{ steps.msdo.outputs.sarifFile }}" ]; then
-          echo "SARIF file exists and has size: $(stat -c%s "${{ steps.msdo.outputs.sarifFile }}" 2>/dev/null || echo "unknown")"
-        else
-          echo "SARIF file does not exist"
-        fi
-        # List .gdn directory if it exists
-        if [ -d ".gdn" ]; then
-          echo "Contents of .gdn directory:"
-          ls -la .gdn/ || true
-        fi
+          echo "MSDO step outcome: ${{ steps.msdo.outcome }}"
+          echo "SARIF file: ${{ steps.msdo.outputs.sarifFile }}"
+          if [ -f "${{ steps.msdo.outputs.sarifFile }}" ]; then
+            echo "SARIF file exists and has size: $(stat -c%s "${{ steps.msdo.outputs.sarifFile }}" 2>/dev/null || echo "unknown")"
+          else
+            echo "SARIF file does not exist"
+          fi
+          # List .gdn directory if it exists
+          if [ -d ".gdn" ]; then
+            echo "Contents of .gdn directory:"
+            ls -la .gdn/ || true
+          fi
       # Alternative Azure configuration (commented out):
       #   config: |
       #     {
