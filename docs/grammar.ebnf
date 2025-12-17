@@ -1,0 +1,147 @@
+(* Copyright (c) 2024 William Sollers *)
+(* SPDX-License-Identifier: BSD-2-Clause *)
+
+(* EBNF Grammar for wshell *)
+(* Phase 1: Minimal shell language with comments, variables, and commands *)
+
+(* ========================================================================== *)
+(* Phase 1 Grammar (Current Implementation) *)
+(* ========================================================================== *)
+
+program         = { statement } EOF ;
+
+statement       = comment
+                | assignment
+                | command
+                | newline ;
+
+comment         = "#" text newline ;
+
+assignment      = "let" identifier "=" value newline ;
+
+command         = identifier { argument } newline ;
+
+value           = word { word } ;
+
+argument        = word ;
+
+word            = identifier | string ;
+
+identifier      = letter { letter | digit | "_" }
+                | "/" { letter | digit | "_" | "/" | "." | "-" }
+                | "." { letter | digit | "_" | "/" | "." } ;
+
+string          = { any_char } ;
+
+letter          = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j"
+                | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t"
+                | "u" | "v" | "w" | "x" | "y" | "z"
+                | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J"
+                | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T"
+                | "U" | "V" | "W" | "X" | "Y" | "Z" ;
+
+digit           = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+newline         = "\n" ;
+
+text            = { any_char_except_newline } ;
+
+any_char        = ? any printable character ? ;
+
+any_char_except_newline = ? any printable character except newline ? ;
+
+EOF             = ? end of file ? ;
+
+(* ========================================================================== *)
+(* EBNF Notation Guide *)
+(* ========================================================================== *)
+(* =       Definition *)
+(* ;       Terminator *)
+(* |       Alternation (or) *)
+(* {}      Repetition (zero or more) *)
+(* []      Optional (zero or one) *)
+(* ()      Grouping *)
+(* ""      Terminal string *)
+(* ? ?     Special sequence (prose description) *)
+
+(* ========================================================================== *)
+(* Examples *)
+(* ========================================================================== *)
+
+(* Comments: *)
+(*   # This is a comment *)
+(*   # Comments extend to end of line *)
+
+(* Variable assignments: *)
+(*   let name = Alice *)
+(*   let greeting = Hello World *)
+(*   let path = /usr/local/bin *)
+
+(* Commands: *)
+(*   echo Hello, World! *)
+(*   ls -la /home/user *)
+(*   cat file.txt *)
+(*   /usr/bin/python3 script.py *)
+
+(* ========================================================================== *)
+(* Phase 2 (Future): Pipelines *)
+(* ========================================================================== *)
+(* pipeline        = command { "|" command } ; *)
+
+(* ========================================================================== *)
+(* Phase 3 (Future): Redirections *)
+(* ========================================================================== *)
+(* redirection     = ">" filename *)
+(*                 | "<" filename *)
+(*                 | ">>" filename ; *)
+(*                  *)
+(* command_with_io = identifier { argument } [ redirection ] newline ; *)
+
+(* ========================================================================== *)
+(* Phase 4 (Future): Control Flow *)
+(* ========================================================================== *)
+(* conditional     = "if" command newline *)
+(*                   "then" newline *)
+(*                   { statement } *)
+(*                   [ "else" newline { statement } ] *)
+(*                   "fi" newline ; *)
+(*  *)
+(* while_loop      = "while" command newline *)
+(*                   "do" newline *)
+(*                   { statement } *)
+(*                   "done" newline ; *)
+(*  *)
+(* for_loop        = "for" identifier "in" word { word } newline *)
+(*                   "do" newline *)
+(*                   { statement } *)
+(*                   "done" newline ; *)
+
+(* ========================================================================== *)
+(* Phase 5 (Future): Operators and Sequencing *)
+(* ========================================================================== *)
+(* command_sequence = command_expr { (";" | "&&" | "||" | "&") command_expr } ; *)
+(*  *)
+(* command_expr     = pipeline *)
+(*                  | "(" command_sequence ")" ; *)
+
+(* ========================================================================== *)
+(* Phase 6 (Future): Functions *)
+(* ========================================================================== *)
+(* function_def    = identifier "()" "{" newline *)
+(*                   { statement } *)
+(*                   "}" newline ; *)
+
+(* ========================================================================== *)
+(* Lexical Grammar (Token Definitions) *)
+(* ========================================================================== *)
+
+(* Regular expression notation: *)
+(* COMMENT      = "#" .* EOL *)
+(* IDENTIFIER   = [a-zA-Z_][a-zA-Z0-9_]* *)
+(*              | [/][a-zA-Z0-9_/.-]* *)
+(*              | [.][a-zA-Z0-9_/.]* *)
+(* LET          = "let" *)
+(* EQUALS       = "=" *)
+(* NEWLINE      = "\n" *)
+(* WHITESPACE   = [ \t]+ (skipped in parsing) *)
+(* EOF          = end of input stream *)

@@ -1,0 +1,117 @@
+# Copyright (c) 2024 William Sollers
+# SPDX-License-Identifier: BSD-2-Clause
+
+# BNF Grammar for wshell
+# Phase 1: Minimal shell language with comments, variables, and commands
+
+# ============================================================================
+# Phase 1 Grammar (Current Implementation)
+# ============================================================================
+
+<program>         ::= <statement>* <EOF>
+
+<statement>       ::= <comment>
+                    | <assignment>
+                    | <command>
+                    | <newline>
+
+<comment>         ::= "#" <text> <newline>
+
+<assignment>      ::= "let" <identifier> "=" <value> <newline>
+
+<command>         ::= <identifier> <argument>* <newline>
+
+<value>           ::= <word>+
+
+<argument>        ::= <word>
+
+<word>            ::= <identifier>
+                    | <string>
+
+<identifier>      ::= <letter> (<letter> | <digit> | "_")*
+                    | "/" (<letter> | <digit> | "_" | "/" | "." | "-")*
+                    | "." (<letter> | <digit> | "_" | "/" | ".")*
+
+<string>          ::= <any-char>+
+
+<letter>          ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j"
+                    | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t"
+                    | "u" | "v" | "w" | "x" | "y" | "z"
+                    | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J"
+                    | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T"
+                    | "U" | "V" | "W" | "X" | "Y" | "Z"
+
+<digit>           ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+<newline>         ::= "\n"
+
+<text>            ::= <any-char-except-newline>*
+
+<any-char>        ::= <any printable character>
+
+<any-char-except-newline> ::= <any printable character except newline>
+
+<EOF>             ::= <end of file>
+
+# ============================================================================
+# Examples
+# ============================================================================
+
+# Comments:
+#   # This is a comment
+#   # Comments extend to end of line
+
+# Variable assignments:
+#   let name = Alice
+#   let greeting = Hello World
+#   let path = /usr/local/bin
+
+# Commands:
+#   echo Hello, World!
+#   ls -la /home/user
+#   cat file.txt
+
+# ============================================================================
+# Phase 2 (Future): Pipelines
+# ============================================================================
+# <pipeline>        ::= <command> ("|" <command>)*
+
+# ============================================================================
+# Phase 3 (Future): Redirections
+# ============================================================================
+# <redirection>     ::= ">" <filename>
+#                     | "<" <filename>
+#                     | ">>" <filename>
+
+# ============================================================================
+# Phase 4 (Future): Control Flow
+# ============================================================================
+# <conditional>     ::= "if" <command> <newline>
+#                       "then" <newline>
+#                       <statement>*
+#                       ("else" <newline> <statement>*)?
+#                       "fi" <newline>
+#
+# <while-loop>      ::= "while" <command> <newline>
+#                       "do" <newline>
+#                       <statement>*
+#                       "done" <newline>
+#
+# <for-loop>        ::= "for" <identifier> "in" <word>+ <newline>
+#                       "do" <newline>
+#                       <statement>*
+#                       "done" <newline>
+
+# ============================================================================
+# Token Definitions (Lexical Grammar)
+# ============================================================================
+
+# COMMENT      := "#" .*$
+# IDENTIFIER   := [a-zA-Z_][a-zA-Z0-9_]*
+#               | [/][a-zA-Z0-9_/.-]*
+#               | [.][a-zA-Z0-9_/.]*
+# LET          := "let"
+# EQUALS       := "="
+# NEWLINE      := "\n"
+# WHITESPACE   := [ \t]+ (ignored)
+# EOF          := end of input

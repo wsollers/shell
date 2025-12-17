@@ -23,6 +23,7 @@ include(CTest)
 include(CheckCXXCompilerFlag)
 include(CheckLinkerFlag)
 
+
 # ============================
 # Options
 # ============================
@@ -203,9 +204,8 @@ endif()
 # ============================
 # New ChatGPT files library
 # ============================
+
 add_library(shell_core
-  src/main/parser/lexer.cpp
-  src/main/parser/parser.cpp
   src/main/parser/input_source.cpp
   src/main/parser/output_destination.cpp
   src/main/parser/config.cpp

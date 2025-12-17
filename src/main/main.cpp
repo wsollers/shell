@@ -1,8 +1,10 @@
 // Copyright (c) 2024 William Sollers
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include "../lib/shell_core.h"
 #include "shell/config.hpp"
+#include "shell/parser.hpp"
+#include "shell/shell_interpreter.hpp"
+#include "version.hpp"
 #include <iostream>
 #include <span>
 #include <string>
@@ -10,7 +12,7 @@
 
 int main(int argc, char* argv[]) {
     
-    std::cout << "wshell version " << wshell::ShellCore::version() << "\n";
+    std::cout << "wshell version " << wshell::version() << "\n";
     
     // Load configuration from ~/.wshellrc
     auto config_path = shell::DefaultConfig::default_config_path();
@@ -51,43 +53,49 @@ int main(int argc, char* argv[]) {
         shell::StreamOutputDestination stderr_dest(std::cerr, "stderr");
 
         auto prompt = config_result->get("PS1").value_or("wshell> ");
+        
+        // Create shell interpreter with platform execution
+        wshell::ShellInterpreter<> interpreter(stdout_dest, stderr_dest);
 
         while (true) {
-            // Write prompt
-            auto rc = stdout_dest.write(prompt)
-                .or_else([&stderr_dest](std::string const& err) -> std::expected<void, std::string> {
-                    (void)stderr_dest.write("Error writing prompt: " + err + "\n");
-                    return std::unexpected(err);
-                });
-
-            if (!rc) {
+            // Write prompt - Go-style error handling
+            if (auto rc = stdout_dest.write(prompt); !rc) {
+                (void)stderr_dest.write("Error writing prompt: " + rc.error() + "\n");
                 break;
             }
-            // Read user input (line by line for interactive mode)
-            auto input = stdin_source.read_line()
-                .or_else([&stderr_dest](std::string const& err) -> std::expected<std::string, std::string> {
-                    (void)stderr_dest.write("Error reading input: " + err + "\n");
-                    return std::unexpected(err);
-                });
-
+            
+            // Read user input
+            auto input = stdin_source.read_line();
             if (!input) {
+                (void)stderr_dest.write("Error reading input: " + input.error() + "\n");
                 break;  // Exit on read error or EOF
             }
 
+            // Check for exit command
             if (*input == "exit") {
-                break;  // TODO: Use parser instead of string comparison
-            }
-
-            // Echo back what was entered
-            auto rrc = stdout_dest.write("You entered: " + *input + "\n")
-                .or_else([&stderr_dest](std::string const& err) -> std::expected<void, std::string> {
-                    (void)stderr_dest.write("Error writing output: " + err + "\n");
-                    return std::unexpected(err);
-            });
-
-            if (!rrc) {
                 break;
+            }
+            
+            // Skip empty lines
+            if (input->empty() || input->find_first_not_of(" \t") == std::string::npos) {
+                continue;
+            }
+            
+            // Parse the input line
+            auto parse_result = wshell::parse_line(*input);
+            if (!parse_result) {
+                (void)stderr_dest.write(parse_result.error().to_string() + "\n");
+                continue;  // Continue on parse error
+            }
+            
+            // Execute the parsed program
+            int exit_code = interpreter.execute_program(**parse_result);
+            
+            // Optionally display exit code for non-zero results
+            if (exit_code != 0) {
+                (void)stderr_dest.write("Command exited with code: " + std::to_string(exit_code) + "\n");
             }
         }
     }
+    return EXIT_SUCCESS;
 }
