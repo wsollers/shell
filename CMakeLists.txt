@@ -200,27 +200,7 @@ if(ENABLE_COVERAGE AND NOT MSVC)
     endif()
 endif()
 
-# ============================
-# New ChatGPT files library
-# ============================
-add_library(shell_core
-  src/main/parser/lexer.cpp
-  src/main/parser/parser.cpp
-  src/main/parser/input_source.cpp
-  src/main/parser/output_destination.cpp
-  src/main/parser/config.cpp
-  src/main/exec/exec_common.cpp
-  src/main/exec/exec_linux.cpp
-  src/main/exec/exec_macos.cpp
-  src/main/exec/exec_win32.cpp
-)
-target_include_directories(shell_core PUBLIC include)
 
-# Apply security/hardening flags to the new library
-target_compile_options(shell_core PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/W4>
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
-)
 
 # ============================
 # Dependencies
@@ -242,11 +222,7 @@ if(ENABLE_TESTING)
         FetchContent_MakeAvailable(googletest)
     endif()
     
-    # Add new ChatGPT test files
-    add_executable(shell_tests test/test_parser.cpp)
-    target_link_libraries(shell_tests PRIVATE shell_core gtest_main)
-    include(GoogleTest)
-    gtest_discover_tests(shell_tests)
+
 endif()
 
 if(ENABLE_BENCHMARKS)
@@ -315,7 +291,7 @@ endif()
 # ============================
 # Installation
 # ============================
-install(TARGETS wshell wshell_lib shell_core
+install(TARGETS wshell wshell_lib
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
