@@ -7,20 +7,13 @@ if(ENABLE_BENCHMARKS)
     message(STATUS "Benchmarks: enabled (Google Benchmark configured)")
 
     # Benchmark: command parser
-    add_executable(bench_command_parser bench_command_parser.cpp)
-    target_link_libraries(bench_command_parser PRIVATE
+    add_executable(bench_parser bench_parser.cpp)
+    target_link_libraries(bench_parser PRIVATE
         wshell_lib
         benchmark::benchmark
     )
-    target_compile_features(bench_command_parser PRIVATE cxx_std_23)
+    target_compile_features(bench_parser PRIVATE cxx_std_23)
 
-    # Benchmark: shell core
-    add_executable(bench_shell_core bench_shell_core.cpp)
-    target_link_libraries(bench_shell_core PRIVATE
-        wshell_lib
-        benchmark::benchmark
-    )
-    target_compile_features(bench_shell_core PRIVATE cxx_std_23)
 
     # Flame graph profiling support
     if(ENABLE_FLAME_GRAPHS)

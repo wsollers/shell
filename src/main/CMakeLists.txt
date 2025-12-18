@@ -11,7 +11,7 @@ configure_file(
 
 add_executable(wshell main.cpp)
 
-target_link_libraries(wshell PRIVATE wshell_lib shell_core)
+target_link_libraries(wshell PRIVATE wshell_lib )
 
 target_include_directories(wshell
     PRIVATE
