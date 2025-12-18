@@ -1,13 +1,14 @@
 // Copyright (c) 2024 William Sollers
 // SPDX-License-Identifier: BSD-2-Clause
 
+#include <iostream>
+#include <span>
+#include <string>
+
 #include "shell/config.hpp"
 #include "shell/parser.hpp"
 #include "shell/shell_interpreter.hpp"
 #include "version.hpp"
-#include <iostream>
-#include <span>
-#include <string>
 #include <shell/output_destination.hpp>
 
 int main(int argc, char* argv[]) {
@@ -53,7 +54,7 @@ int main(int argc, char* argv[]) {
         wshell::ShellInterpreter<> interpreter(stdout_dest, stderr_dest);
 
         while (true) {
-            // Write prompt - Go-style error handling
+
             if (auto rc = stdout_dest.write(prompt); !rc) {
                 (void)stderr_dest.write("Error writing prompt: " + rc.error() + "\n");
                 break;
