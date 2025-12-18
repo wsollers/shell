@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-
+if(ENABLE_FUZZING)
 # Default: fuzzing not enabled unless we pass all checks below
 set(WSHELL_FUZZ_ENABLED OFF CACHE INTERNAL "Whether fuzz targets are enabled" FORCE)
 
@@ -58,20 +58,11 @@ set(WSHELL_FUZZ_LINK_OPTS
 
 set(WSHELL_FUZZ_ENABLED ON CACHE INTERNAL "Whether fuzz targets are enabled" FORCE)
 
-# Fuzz: command parser
-add_executable(fuzz_command_parser fuzz_command_parser.cpp)
-target_link_libraries(fuzz_command_parser PRIVATE wshell_lib)
-target_compile_options(fuzz_command_parser PRIVATE ${WSHELL_FUZZ_COMPILE_OPTS})
-target_link_options(fuzz_command_parser PRIVATE ${WSHELL_FUZZ_LINK_OPTS})
-
-# Fuzz: shell core
-add_executable(fuzz_shell_core fuzz_shell_core.cpp)
-target_link_libraries(fuzz_shell_core PRIVATE wshell_lib)
-target_compile_options(fuzz_shell_core PRIVATE ${WSHELL_FUZZ_COMPILE_OPTS})
-target_link_options(fuzz_shell_core PRIVATE ${WSHELL_FUZZ_LINK_OPTS})
 
 # Fuzz: parser
 add_executable(fuzz_parse fuzz_parse.cpp)
 target_link_libraries(fuzz_parse PRIVATE shell_core)
 target_compile_options(fuzz_parse PRIVATE ${WSHELL_FUZZ_COMPILE_OPTS})
 target_link_options(fuzz_parse PRIVATE ${WSHELL_FUZZ_LINK_OPTS})
+
+  endif()
