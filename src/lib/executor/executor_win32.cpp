@@ -11,7 +11,7 @@
 
 namespace wshell {
 
-void PlatformExecutionPolicy::printWindowsErrMsg(DWORD& error) const {
+void printWindowsErrMsg(DWORD& error) {
     error = GetLastError();
     LPVOID lpMsgBuf;
     FormatMessage(
@@ -24,6 +24,7 @@ void PlatformExecutionPolicy::printWindowsErrMsg(DWORD& error) const {
     // Free the buffer allocated by FormatMessage
     LocalFree(lpMsgBuf);
 }
+
 ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
     // Build command line (Windows uses a single string, not argv array)
     std::ostringstream cmdline;
@@ -63,6 +64,7 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
     
     if (!success) {
         DWORD error;
+
         printWindowsErrMsg(error);
 
         return ExecutionResult{
