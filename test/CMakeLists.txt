@@ -15,7 +15,7 @@ if(ENABLE_TESTING)
     endif()
 
     target_link_libraries(wshell_tests PRIVATE
-            shell_core
+            wshell_lib
     )
 
     # Fix MSVC CI: make sure wshell_tests.exe can find wshell.dll during discovery

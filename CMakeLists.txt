@@ -263,7 +263,7 @@ if(ENABLE_BENCHMARKS)
     
     # Add new ChatGPT benchmark files
     add_executable(shell_bench bench/bench_parser.cpp)
-    target_link_libraries(shell_bench PRIVATE shell_core benchmark::benchmark)
+    target_link_libraries(shell_bench PRIVATE wshell_lib benchmark::benchmark)
 endif()
 
 # ============================
@@ -341,8 +341,6 @@ if(ENABLE_SBOM)
     # Add targets to SBOM
     sbom_add(TARGET wshell)
     sbom_add(TARGET wshell_lib)
-    sbom_add(TARGET shell_core)
-    
     # Finalize SBOM (generates tag-value format, disable verification to avoid issues)
     sbom_finalize(NO_VERIFY)
     
