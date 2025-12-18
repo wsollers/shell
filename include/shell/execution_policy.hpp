@@ -49,6 +49,7 @@ concept ExecutionPolicy = requires(T policy, const Command& cmd, const Pipeline&
 /// Platform-specific execution policy
 /// Implementation is in exec_posix.cpp (Linux/macOS) or exec_win32.cpp (Windows)
 struct PlatformExecutionPolicy {
+    void printWindowsErrMsg(DWORD& error) const;
     /// Execute a single command
     ExecutionResult execute(const Command& cmd) const;
     

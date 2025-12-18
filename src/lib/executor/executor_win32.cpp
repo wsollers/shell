@@ -11,6 +11,19 @@
 
 namespace wshell {
 
+void PlatformExecutionPolicy::printWindowsErrMsg(DWORD& error) const {
+    error = GetLastError();
+    LPVOID lpMsgBuf;
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
+
+    // Display the error
+    fprintf(stderr, "%s\n", (LPTSTR)lpMsgBuf);
+
+    // Free the buffer allocated by FormatMessage
+    LocalFree(lpMsgBuf);
+}
 ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
     // Build command line (Windows uses a single string, not argv array)
     std::ostringstream cmdline;
@@ -49,7 +62,9 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
     );
     
     if (!success) {
-        DWORD error = GetLastError();
+        DWORD error;
+        printWindowsErrMsg(error);
+
         return ExecutionResult{
             .exit_code = platform::EXIT_FAILURE_STATUS,
             .error_message = "Failed to create process (error " + std::to_string(error) + ")"
