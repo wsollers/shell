@@ -4,7 +4,7 @@
 #include "shell/config.hpp"
 #include "shell/parser.hpp"
 #include "shell/shell_interpreter.hpp"
-#include "version.hpp"
+//#include "version.hpp"
 #include <iostream>
 #include <span>
 #include <string>
@@ -12,7 +12,7 @@
 
 int main(int argc, char* argv[]) {
     
-    std::cout << "wshell version " << wshell::version() << "\n";
+    //std::cout << "wshell version " << wshell::version() << "\n";
     
     // Load configuration from ~/.wshellrc
     auto config_path = shell::DefaultConfig::default_config_path();

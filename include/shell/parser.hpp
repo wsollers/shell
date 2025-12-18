@@ -50,7 +50,7 @@ public:
     
     /// Parse the entire program
     [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError> parse_program();
-    
+
     /// Parse a single line (for REPL mode)
     [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError> parse_line();
     
@@ -72,6 +72,9 @@ private:
     
     [[nodiscard]] ParseError make_error(const std::string& message);
 };
+
+
+
 
 // ============================================================================
 // Convenience Functions

@@ -29,7 +29,7 @@ namespace wshell::platform {
 #ifdef WSHELL_PLATFORM_WINDOWS
     /// Windows: Use HANDLE for processes and Job Objects
     using ProcessHandle = HANDLE;
-    inline constexpr ProcessHandle INVALID_PROCESS = INVALID_HANDLE_VALUE;
+    inline const ProcessHandle INVALID_PROCESS = INVALID_HANDLE_VALUE;
     
     /// Windows uses DWORD for process IDs
     using ProcessId = DWORD;
@@ -116,7 +116,7 @@ struct ProcessGroup {
 #endif
     
     // Factory method - identical signature across platforms
-    [[nodiscard]] static ProcessGroup create(ProcessId id = 0) noexcept {
+    [[nodiscard]] static ProcessGroup create([[maybe_unused]] ProcessId id = 0) noexcept {
         ProcessGroup pg;
 #ifdef WSHELL_PLATFORM_WINDOWS
         // Windows: Create a Job Object (id parameter ignored)
