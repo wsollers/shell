@@ -70,6 +70,24 @@ struct StrictValidationPolicy {
 // Configuration Class (Redesigned with DI)
 //==============================================================================
 
+/// @brief ConfigError types for configuration operations
+enum class ErrorCode {
+    FILE_NOT_FOUND,
+    PERMISSION_DENIED,
+    PARSE_ERROR,
+    INVALID_VARIABLE_NAME,
+    FILE_TOO_LARGE,
+    IO_ERROR,
+    SOURCE_READ_ERROR
+};
+
+struct ConfigError {
+    ErrorCode code;
+    std::string message;
+    std::size_t line_number{0};
+    std::string source_name;
+    std::source_location location;  // No default - must be set via make_error()
+};
 /// @brief Configuration and variable management for the shell
 /// @tparam ValidationPolicy Policy for validation rules (default: DefaultValidationPolicy)
 /// @details Provides bash-like variable storage with:
@@ -82,24 +100,8 @@ class Config {
 public:
     using Variables = std::map<std::string, std::string>;
     
-    /// @brief Error types for configuration operations
-    enum class ErrorCode {
-        FILE_NOT_FOUND,
-        PERMISSION_DENIED,
-        PARSE_ERROR,
-        INVALID_VARIABLE_NAME,
-        FILE_TOO_LARGE,
-        IO_ERROR,
-        SOURCE_READ_ERROR
-    };
-    
-    struct Error {
-        ErrorCode code;
-        std::string message;
-        std::size_t line_number{0};
-        std::string source_name;
-        std::source_location location;  // No default - must be set via make_error()
-    };
+
+
 
     //==========================================================================
     // Construction
@@ -110,30 +112,25 @@ public:
 
     /// @brief Load configuration from an input source (DI)
     /// @param source Pointer to input source (must not be null)
-    /// @return Expected with Config or Error
+    /// @return Expected with Config or ConfigError
     /// @note Uses dependency injection for testability
-    [[nodiscard]] static std::expected<Config, Error> load_from_source(
+    [[nodiscard]] std::expected<Config, ConfigError> loadFromSource(
         std::unique_ptr<IInputSource> source
     );
     
     /// @brief Load configuration from an input source (DI, non-owning)
     /// @param source Reference to input source
-    /// @return Expected with Config or Error
-    [[nodiscard]] static std::expected<Config, Error> load_from_source(
+    /// @return Expected with Config or ConfigError
+    [[nodiscard]] std::expected<Config, ConfigError> loadFromSource(
         IInputSource& source
     );
 
-    /// @brief Convenience: Load from file path
-    /// @param path Path to configuration file
-    /// @return Expected with Config or Error
-    [[nodiscard]] static std::expected<Config, Error> load_from_file(
-        std::filesystem::path const& path
-    );
+    void showEnvironmentVariables();
 
     /// @brief Convenience: Parse from string content
     /// @param content Configuration content in key=value format
-    /// @return Expected with Config or Error
-    [[nodiscard]] static std::expected<Config, Error> parse(std::string_view content);
+    /// @return Expected with Config or ConfigError
+    [[nodiscard]] std::expected<Config, ConfigError> parse(std::string_view content);
 
     /// @brief Get the default config file path for the current user
     /// @return Path to ~/.wshellrc or equivalent
@@ -158,8 +155,8 @@ public:
     /// @brief Set a variable value
     /// @param name Variable name (must be valid identifier)
     /// @param value Variable value
-    /// @return Expected with void or Error
-    [[nodiscard]] std::expected<void, Error> set(std::string name, std::string value);
+    /// @return Expected with void or ConfigError
+    [[nodiscard]] std::expected<void, ConfigError> set(std::string name, std::string value);
 
     /// @brief Remove a variable
     /// @param name Variable name
@@ -184,23 +181,23 @@ private:
     /// @brief Parse configuration content from string
     /// @param content Content to parse
     /// @param source_name Name of source for error reporting
-    /// @return Expected with Config or Error
-    [[nodiscard]] static std::expected<Config, Error> parse_impl(
+    /// @return Expected with Config or ConfigError
+    [[nodiscard]] static std::expected<Config, ConfigError> parse_impl(
         std::string_view content,
         std::string_view source_name
     );
 
     /// @brief Create an error with source location
-    /// @param code Error code
-    /// @param message Error message
+    /// @param code ConfigError code
+    /// @param message ConfigError message
     /// @param loc Source location where error was created
-    /// @return Error object
-    [[nodiscard]] static Error make_error(
+    /// @return ConfigError object
+    [[nodiscard]] static ConfigError make_error(
         ErrorCode code,
         std::string message,
         std::source_location loc = std::source_location::current()
     ) {
-        return Error{
+        return ConfigError{
             .code = code,
             .message = std::move(message),
             .line_number = 0,
@@ -210,20 +207,20 @@ private:
     }
 
     /// @brief Create an error with source location and line number
-    /// @param code Error code
-    /// @param message Error message
+    /// @param code ConfigError code
+    /// @param message ConfigError message
     /// @param line_num Line number in config file
     /// @param source Source name
     /// @param loc Source location where error was created
-    /// @return Error object
-    [[nodiscard]] static Error make_error(
+    /// @return ConfigError object
+    [[nodiscard]] static ConfigError make_error(
         ErrorCode code,
         std::string message,
         std::size_t line_num,
         std::string source,
         std::source_location loc = std::source_location::current()
     ) {
-        return Error{
+        return ConfigError{
             .code = code,
             .message = std::move(message),
             .line_number = line_num,
@@ -245,6 +242,28 @@ using DefaultConfig = Config<DefaultValidationPolicy>;
 
 /// @brief Strict Config using StrictValidationPolicy  
 using StrictConfig = Config<StrictValidationPolicy>;
+
+template<typename ValidationPolicy = DefaultValidationPolicy>
+struct ConfigFactory {
+    static std::optional<ConfigError>  create(FileInputSource& src) {
+        Config<ValidationPolicy> config;
+        auto result = config.load_from_source(src);
+        return result.has_value() ? std::nullopt : std::make_optional(result.error());
+    }
+
+    static std::optional<ConfigError> create(StreamInputSource& src) {
+        Config<ValidationPolicy> config;
+        auto result = config.load_from_source(src);
+        return result.has_value() ? std::nullopt : std::make_optional(result.error());
+    }
+
+    static std::optional<ConfigError> create(StringInputSource& src) {
+        Config<ValidationPolicy> config;
+        auto result = config.load_from_source(src);
+        return result.has_value() ? std::nullopt : std::make_optional(result.error());
+    }
+};
+
 
 } // namespace shell
 

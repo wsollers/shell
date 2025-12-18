@@ -7,6 +7,9 @@
 #include <cctype>
 #include <ranges>
 
+#include "config.hpp"
+
+
 namespace shell {
 
 //==============================================================================
@@ -14,19 +17,19 @@ namespace shell {
 //==============================================================================
 
 template<typename ValidationPolicy>
-std::expected<Config<ValidationPolicy>, typename Config<ValidationPolicy>::Error>
-Config<ValidationPolicy>::load_from_source(std::unique_ptr<IInputSource> source) {
+std::expected<Config<ValidationPolicy>, ConfigError>
+Config<ValidationPolicy>::loadFromSource(std::unique_ptr<IInputSource> source) {
     if (!source) {
         auto err = make_error(ErrorCode::IO_ERROR, "Null configuration source");
         err.source_name = "null";
         return std::unexpected(err);
     }
-    return load_from_source(*source);
+    return loadFromSource(*source);
 }
 
 template<typename ValidationPolicy>
-std::expected<Config<ValidationPolicy>, typename Config<ValidationPolicy>::Error>
-Config<ValidationPolicy>::load_from_source(IInputSource& source) {
+std::expected<Config<ValidationPolicy>, ConfigError>
+Config<ValidationPolicy>::loadFromSource(IInputSource& source) {
     auto content_result = source.read();
     if (!content_result) {
         auto err = make_error(ErrorCode::SOURCE_READ_ERROR, content_result.error());
@@ -37,22 +40,16 @@ Config<ValidationPolicy>::load_from_source(IInputSource& source) {
     return parse_impl(*content_result, source.source_name());
 }
 
-template<typename ValidationPolicy>
-std::expected<Config<ValidationPolicy>, typename Config<ValidationPolicy>::Error>
-Config<ValidationPolicy>::load_from_file(std::filesystem::path const& path) {
-    auto source = std::make_unique<FileInputSource>(path);
-    return load_from_source(std::move(source));
-}
 
 template<typename ValidationPolicy>
-std::expected<Config<ValidationPolicy>, typename Config<ValidationPolicy>::Error>
+std::expected<Config<ValidationPolicy>, ConfigError>
 Config<ValidationPolicy>::parse(std::string_view content) {
     auto source = StringInputSource(std::string(content), "string");
-    return load_from_source(source);
+    return loadFromSource(source);
 }
 
 template<typename ValidationPolicy>
-std::expected<Config<ValidationPolicy>, typename Config<ValidationPolicy>::Error>
+std::expected<Config<ValidationPolicy>, ConfigError>
 Config<ValidationPolicy>::parse_impl(std::string_view content, std::string_view source_name) {
     // Security: Validate input size
     if (content.size() > ValidationPolicy::MAX_CONFIG_SIZE) {
@@ -183,7 +180,8 @@ std::optional<std::string_view> Config<ValidationPolicy>::get_view(std::string_v
 }
 
 template<typename ValidationPolicy>
-std::expected<void, typename Config<ValidationPolicy>::Error>
+std::expected<void, ConfigError>
+
 Config<ValidationPolicy>::set(std::string name, std::string value) {
     // Security: Validate name
     if (!ValidationPolicy::is_valid_name(name)) {

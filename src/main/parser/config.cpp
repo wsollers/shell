@@ -5,7 +5,7 @@
 #include "shell/input_source.hpp"
 #include <algorithm>
 #include <cctype>
-
+#include <iostream>
 #ifdef _WIN32
 #include <stdlib.h>
 #else
@@ -59,6 +59,13 @@ bool StrictValidationPolicy::check_limits(std::size_t name_len,
     return name_len <= MAX_NAME_LENGTH && 
            value_len <= MAX_VALUE_LENGTH &&
            var_count < MAX_VARIABLE_COUNT;
+}
+
+template<typename ValidationPolicy>
+void Config<ValidationPolicy>::showEnvironmentVariables() {
+    std::ranges::for_each(variables_, [](auto const& kv) {
+        std::cout << std::format("{:<20} = {}\n", kv.first, kv.second);
+    });
 }
 
 //==============================================================================

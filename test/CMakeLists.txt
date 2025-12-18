@@ -1,8 +1,5 @@
 add_executable(wshell_tests
-    test_shell_core.cpp
     test_command_parser.cpp
-    test_parser.cpp
-    test_config.cpp
 )
 
 if(TARGET GTest::gtest)

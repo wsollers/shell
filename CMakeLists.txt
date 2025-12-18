@@ -243,7 +243,7 @@ if(ENABLE_TESTING)
     endif()
     
     # Add new ChatGPT test files
-    add_executable(shell_tests test/test_parser.cpp)
+    add_executable(shell_tests test/test_command_parser.cpp)
     target_link_libraries(shell_tests PRIVATE shell_core gtest_main)
     include(GoogleTest)
     gtest_discover_tests(shell_tests)

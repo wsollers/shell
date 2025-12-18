@@ -37,8 +37,8 @@ public:
             if (result) {
                 last_exit_code = *result;
             } else {
-                // Error executing statement
-                (void)error_output_.write("Error: " + result.error() + "\n");
+                // ConfigError executing statement
+                (void)error_output_.write("ConfigError: " + result.error() + "\n");
                 last_exit_code = platform::EXIT_FAILURE_STATUS;
             }
         }

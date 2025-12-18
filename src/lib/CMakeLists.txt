@@ -1,23 +1,40 @@
 # Library source files
-add_library(wshell_lib SHARED
-    lexer.cpp
-    parser.cpp
+file(GLOB_RECURSE WSHELL_SOURCES_PARSER
+        ${CMAKE_CURRENT_SOURCE_DIR}/parser/*.cpp
 )
+
+file(GLOB_RECURSE WSHELL_SOURCES_EXECUTOR
+        ${CMAKE_CURRENT_SOURCE_DIR}/executor/*.cpp
+)
+
+add_library(wshell_lib STATIC
+    ${WSHELL_SOURCES_PARSER}
+    ${WSHELL_SOURCES_EXECUTOR}
+)
+
 
 # Platform-specific executor implementations
 if(WIN32)
-    target_sources(wshell_lib PRIVATE executor_win32.cpp)
+    target_sources(wshell_lib PRIVATE executor/executor_win32.cpp)
 elseif(UNIX)
-    target_sources(wshell_lib PRIVATE executor_posix.cpp)
+    target_sources(wshell_lib PRIVATE executor/executor_posix.cpp)
 else()
     message(FATAL_ERROR "Unsupported platform")
 endif()
+
+target_include_directories(wshell_lib PUBLIC ../../include)
+
+# Apply security/hardening flags to the new library
+target_compile_options(wshell_lib PRIVATE
+        $<$<CXX_COMPILER_ID:MSVC>:/W4>
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
+)
 
 # Set library properties
 set_target_properties(wshell_lib PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
-    OUTPUT_NAME wshell
+    OUTPUT_NAME wshell_lib
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF

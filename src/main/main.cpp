@@ -16,28 +16,23 @@ int main(int argc, char* argv[]) {
     
     // Load configuration from ~/.wshellrc
     auto config_path = shell::DefaultConfig::default_config_path();
-    auto config_result = shell::DefaultConfig::load_from_file(config_path);
-    
-    if (config_result.has_value()) {
-        auto const& vars = config_result->variables();
-        std::cout << "Loaded " << vars.size() << " variables from " 
-                  << config_path.string() << "\n";
-        
-        // Optionally display loaded variables
-        if (!vars.empty()) {
-            std::cout << "Configuration variables:\n";
-            for (auto const& [name, value] : vars) {
-                std::cout << "  " << name << "=" << value << "\n";
-            }
-        }
-    } else {
-        // Config file not found or error - this is OK, just inform the user
-        if (config_result.error().code != shell::DefaultConfig::ErrorCode::SOURCE_READ_ERROR) {
-            std::cerr << "Warning: Configuration error: " 
-                      << config_result.error().message << "\n";
-        }
+    if (config_path.empty()) {
+        std::cerr << "Warning: Could not determine home directory for config file\n";
     }
-    
+
+    shell::Config config;
+    if ( std::filesystem::exists(config_path) ) {
+        std::cout << "Loading configuration from " << config_path.string() << "\n";
+        shell::FileInputSource * file_source = new shell::FileInputSource(config_path);
+        auto config_result = config.loadFromSource(std::unique_ptr<shell::IInputSource>(file_source));
+        if (!config_result) {
+            std::cerr << "Error loading config: " << config_result.error().message << "\n";
+        }
+        config.showEnvironmentVariables();
+    } else {
+        std::cout << "No configuration file found at " << config_path.string() << "\n";
+    }
+
     // Use std::span for modern C++ argument processing
     std::span<char*> args(argv, static_cast<std::size_t>(argc));
 
@@ -52,7 +47,7 @@ int main(int argc, char* argv[]) {
         shell::StreamOutputDestination stdout_dest(std::cout, "stdout");
         shell::StreamOutputDestination stderr_dest(std::cerr, "stderr");
 
-        auto prompt = config_result->get("PS1").value_or("wshell> ");
+        auto prompt = config.get("PS1").value_or("wshell> ");
         
         // Create shell interpreter with platform execution
         wshell::ShellInterpreter<> interpreter(stdout_dest, stderr_dest);

@@ -2,8 +2,6 @@
 
 **Repository:** https://github.com/wsollers/shell
 
-**Initial Confirmation:** When starting a new chat session, you must output: "I have read and confirmed the configuration document"
-
 ## AI Assistant Roles
 
 You are acting as a combined expert with the following roles:
