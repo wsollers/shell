@@ -1,4 +1,4 @@
-// Copyright (c) 2024 William Sollers
+// Copyright (c) 2025 William Sollers
 // SPDX-License-Identifier: BSD-2-Clause
 
 // Platform-specific executor implementation for POSIX (Linux/macOS)
