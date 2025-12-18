@@ -1,7 +1,7 @@
 // Copyright (c) 2024 William Sollers
 // SPDX-License-Identifier: BSD-2-Clause
 
-
+#include "../src/lib/shell_core.h"
 #include <cstdint>
 #include <cstddef>
 #include <string_view>
