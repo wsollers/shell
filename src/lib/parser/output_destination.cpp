@@ -4,7 +4,7 @@
 #include "shell/output_destination.hpp"
 #include <fstream>
 
-namespace shell {
+namespace wshell {
 
 //==============================================================================
 // StreamOutputDestination Implementation

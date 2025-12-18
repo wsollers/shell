@@ -78,8 +78,8 @@ if (result.has_value()) {
 #include "shell/config.hpp"
 
 // Load from default location (~/.wshellrc)
-auto path = shell::Config::default_config_path();
-auto config = shell::Config::load_from_file(path);
+auto path = wshell::Config::default_config_path();
+auto config = wshell::Config::load_from_file(path);
 
 if (config.has_value()) {
     // Configuration loaded successfully
@@ -91,7 +91,7 @@ if (config.has_value()) {
 
 ```cpp
 std::string content = "VAR1=value1\nVAR2=value2";
-auto config = shell::Config::parse(content);
+auto config = wshell::Config::parse(content);
 ```
 
 ### Reading Variables

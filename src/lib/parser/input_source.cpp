@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace shell {
+namespace wshell {
 
 //==============================================================================
 // FileInputSource Implementation

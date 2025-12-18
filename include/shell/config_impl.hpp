@@ -10,7 +10,7 @@
 #include "config.hpp"
 
 
-namespace shell {
+namespace wshell {
 
 //==============================================================================
 // Config Template Implementation

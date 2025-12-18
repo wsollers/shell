@@ -9,7 +9,7 @@
 #include <memory>
 #include <string>
 
-namespace shell {
+namespace wshell {
 
 //==============================================================================
 // Input Source Abstraction (Dependency Injection Interface)

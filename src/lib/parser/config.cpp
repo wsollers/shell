@@ -13,7 +13,7 @@
 #include <unistd.h>
 #endif
 
-namespace shell {
+namespace wshell {
 
 //==============================================================================
 // Validation Policy Implementations

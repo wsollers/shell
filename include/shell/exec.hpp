@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace shell {
+namespace wshell {
 
 struct ExecError {
   std::string msg;

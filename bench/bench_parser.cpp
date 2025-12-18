@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-using namespace shell;
+using namespace wshell;
 
 static void BM_LexParse(benchmark::State& state) {
 

@@ -10,7 +10,7 @@
 #include <sstream>
 
 // Example 1: Create a fake input source for testing
-class FakeInputSource : public shell::IInputSource {
+class FakeInputSource : public wshell::IInputSource {
 public:
     explicit FakeInputSource(std::string content, bool should_fail = false)
         : content_(std::move(content)), should_fail_(should_fail) {}
@@ -37,7 +37,7 @@ void example_string_source() {
         "VAR1=value1\nVAR2=value2\n# Comment\nVAR3=value3"
     );
     
-    auto config = shell::DefaultConfig::load_from_source(std::move(source));
+    auto config = wshell::DefaultConfig::load_from_source(std::move(source));
     
     if (config) {
         std::cout << "Loaded " << config->variables().size() << " variables\n";
@@ -52,9 +52,9 @@ void example_stream_source() {
     std::cout << "\n=== Example: Stream Input Source ===\n";
     
     std::istringstream stream("DEBUG=true\nLOG_LEVEL=verbose\n");
-    shell::StreamInputSource source(stream, "test_stream");
+    wshell::StreamInputSource source(stream, "test_stream");
     
-    auto config = shell::DefaultConfig::load_from_source(source);
+    auto config = wshell::DefaultConfig::load_from_source(source);
     
     if (config) {
         if (auto val = config->get("DEBUG")) {
@@ -72,7 +72,7 @@ void example_fake_source() {
     
     // Test successful read
     auto source = std::make_unique<FakeInputSource>("TEST=fake_value");
-    auto config = shell::DefaultConfig::load_from_source(std::move(source));
+    auto config = wshell::DefaultConfig::load_from_source(std::move(source));
     
     if (config) {
         std::cout << "Success: " << config->get("TEST").value() << "\n";
@@ -80,7 +80,7 @@ void example_fake_source() {
     
     // Test failed read
     source = std::make_unique<FakeInputSource>("", true);
-    config = shell::DefaultConfig::load_from_source(std::move(source));
+    config = wshell::DefaultConfig::load_from_source(std::move(source));
     
     if (!config) {
         std::cout << "Expected failure: " << config.error().message << "\n";
@@ -92,12 +92,12 @@ void example_validation_policies() {
     std::cout << "\n=== Example: Validation Policies ===\n";
     
     // Default policy (generous limits)
-    auto default_config = shell::DefaultConfig::parse("VAR=value");
+    auto default_config = wshell::DefaultConfig::parse("VAR=value");
     std::cout << "Default policy: " 
               << (default_config ? "SUCCESS" : "FAIL") << "\n";
     
     // Strict policy (tighter limits)
-    auto strict_config = shell::StrictConfig::parse("VAR=value");
+    auto strict_config = wshell::StrictConfig::parse("VAR=value");
     std::cout << "Strict policy: " 
               << (strict_config ? "SUCCESS" : "FAIL") << "\n";
 }
@@ -106,7 +106,7 @@ void example_validation_policies() {
 void example_memory_safety() {
     std::cout << "\n=== Example: Memory-Safe API ===\n";
     
-    shell::DefaultConfig config;
+    wshell::DefaultConfig config;
     config.set("TEST", "value");
     
     // Old API (UNSAFE - could dangle):
@@ -129,7 +129,7 @@ void example_memory_safety() {
 void example_error_handling() {
     std::cout << "\n=== Example: Error Handling with Source Location ===\n";
     
-    shell::DefaultConfig config;
+    wshell::DefaultConfig config;
     
     // set() now returns std::expected
     auto result = config.set("VALID_VAR", "value");

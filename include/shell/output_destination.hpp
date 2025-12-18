@@ -10,7 +10,7 @@
 #include <string>
 #include <string_view>
 
-namespace shell {
+namespace wshell {
 
 //==============================================================================
 // Output Destination Abstraction (Dependency Injection Interface)

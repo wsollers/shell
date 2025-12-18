@@ -24,8 +24,8 @@ template<ExecutionPolicy Policy = PlatformExecutionPolicy>
 class ShellInterpreter {
 public:
     /// Construct with output destination for messages
-    explicit ShellInterpreter(shell::IOutputDestination& output, 
-                             shell::IOutputDestination& error_output)
+    explicit ShellInterpreter(wshell::IOutputDestination& output,
+                             wshell::IOutputDestination& error_output)
         : output_(output), error_output_(error_output) {}
     
     /// Execute a parsed program (AST)
@@ -77,8 +77,8 @@ public:
 private:
     Executor<Policy> executor_;
     std::map<std::string, std::string> variables_;
-    shell::IOutputDestination& output_;
-    shell::IOutputDestination& error_output_;
+    wshell::IOutputDestination& output_;
+    wshell::IOutputDestination& error_output_;
     
     /// Execute a single statement
     [[nodiscard]] std::expected<int, std::string> execute_statement(const StatementNode& statement) {

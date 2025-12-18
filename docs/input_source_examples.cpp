@@ -14,7 +14,7 @@ void example_interactive_shell() {
     std::cout << "Type commands (or 'exit' to quit):\n\n";
     
     // Wrap stdin in a StreamInputSource
-    shell::StreamInputSource stdin_source(std::cin, "stdin");
+    wshell::StreamInputSource stdin_source(std::cin, "stdin");
     
     while (true) {
         std::cout << "wshell> ";
@@ -39,7 +39,7 @@ void example_batch_processing(std::string const& script_path) {
     std::cout << "\n=== Batch Processing Example ===\n";
     
     // Use FileInputSource to read a script file
-    shell::FileInputSource script_source(script_path);
+    wshell::FileInputSource script_source(script_path);
     
     auto content = script_source.read();
     if (!content) {
@@ -70,7 +70,7 @@ void example_testing_with_string_source() {
     std::cout << "\n=== Testing Example ===\n";
     
     // Simulate user input for testing
-    shell::StringInputSource test_input(
+    wshell::StringInputSource test_input(
         "ls -la\n"
         "cd /tmp\n"
         "echo 'Hello, World!'\n"
@@ -114,12 +114,12 @@ int main() {
     example_testing_with_string_source();
     
     // Example 2: Polymorphic processing
-    shell::StringInputSource str_src("echo 'test'", "inline_command");
+    wshell::StringInputSource str_src("echo 'test'", "inline_command");
     process_input_source(str_src);
     
     // Example 3: Stream from stringstream (simulating stdin)
     std::istringstream fake_input("ls\npwd\nexit\n");
-    shell::StreamInputSource stream_src(fake_input, "fake_stdin");
+    wshell::StreamInputSource stream_src(fake_input, "fake_stdin");
     process_input_source(stream_src);
     
     std::cout << "\nAll examples completed!\n";

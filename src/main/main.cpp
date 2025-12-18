@@ -15,16 +15,16 @@ int main(int argc, char* argv[]) {
     std::cout << "wshell version " << wshell::version() << "\n";
     
     // Load configuration from ~/.wshellrc
-    auto config_path = shell::DefaultConfig::default_config_path();
+    auto config_path = wshell::DefaultConfig::default_config_path();
     if (config_path.empty()) {
         std::cerr << "Warning: Could not determine home directory for config file\n";
     }
 
-    shell::Config config;
+    wshell::Config config;
     if ( std::filesystem::exists(config_path) ) {
         std::cout << "Loading configuration from " << config_path.string() << "\n";
-        shell::FileInputSource * file_source = new shell::FileInputSource(config_path);
-        auto config_result = config.loadFromSource(std::unique_ptr<shell::IInputSource>(file_source));
+        wshell::FileInputSource * file_source = new wshell::FileInputSource(config_path);
+        auto config_result = config.loadFromSource(std::unique_ptr<wshell::IInputSource>(file_source));
         if (!config_result) {
             std::cerr << "Error loading config: " << config_result.error().message << "\n";
         }
@@ -43,9 +43,9 @@ int main(int argc, char* argv[]) {
         //parse args and set flags
     } else {
 
-        shell::StreamInputSource stdin_source(std::cin, "stdin");
-        shell::StreamOutputDestination stdout_dest(std::cout, "stdout");
-        shell::StreamOutputDestination stderr_dest(std::cerr, "stderr");
+        wshell::StreamInputSource stdin_source(std::cin, "stdin");
+        wshell::StreamOutputDestination stdout_dest(std::cout, "stdout");
+        wshell::StreamOutputDestination stderr_dest(std::cerr, "stderr");
 
         auto prompt = config.get("PS1").value_or("wshell> ");
         

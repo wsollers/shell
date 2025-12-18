@@ -76,11 +76,11 @@ void example_production() {
     std::cout << "=== Production Example ===\n";
     std::cout << "Type commands (or 'exit' to quit):\n";
     
-    shell::StreamInputSource input(std::cin, "stdin");
-    shell::StreamOutputDestination output(std::cout, "stdout");
-    shell::StreamOutputDestination error(std::cerr, "stderr");
+    wshell::StreamInputSource input(std::cin, "stdin");
+    wshell::StreamOutputDestination output(std::cout, "stdout");
+    wshell::StreamOutputDestination error(std::cerr, "stderr");
     
-    shell::TestableShell shell(input, output, error);
+    wshell::TestableShell shell(input, output, error);
     // shell.run();  // Uncomment for interactive demo
 }
 
@@ -89,7 +89,7 @@ void example_testing() {
     std::cout << "\n=== Testing Example ===\n";
     
     // Setup fake input
-    shell::StringInputSource input(
+    wshell::StringInputSource input(
         "# Test script\n"
         "ls -la\n"
         "cd /tmp\n"
@@ -100,11 +100,11 @@ void example_testing() {
     );
     
     // Capture output and errors
-    shell::StringOutputDestination output("test_output");
-    shell::StringOutputDestination error("test_error");
+    wshell::StringOutputDestination output("test_output");
+    wshell::StringOutputDestination error("test_error");
     
     // Run the shell
-    shell::TestableShell shell(input, output, error);
+    wshell::TestableShell shell(input, output, error);
     shell.run();
     
     // Verify output
@@ -120,7 +120,7 @@ void example_logging() {
     std::cout << "\n=== Logging Example ===\n";
     
     // Input from string (simulating user commands)
-    shell::StringInputSource input(
+    wshell::StringInputSource input(
         "command1\n"
         "command2\n"
         "error command3\n"
@@ -129,14 +129,14 @@ void example_logging() {
     );
     
     // Output to both console and file
-    shell::StreamOutputDestination console_out(std::cout, "console");
-    shell::FileOutputDestination file_out("/tmp/shell_output.log", 
-                                          shell::FileOutputDestination::Mode::Truncate);
+    wshell::StreamOutputDestination console_out(std::cout, "console");
+    wshell::FileOutputDestination file_out("/tmp/shell_output.log",
+                                          wshell::FileOutputDestination::Mode::Truncate);
     
-    shell::StreamOutputDestination error_out(std::cerr, "stderr");
+    wshell::StreamOutputDestination error_out(std::cerr, "stderr");
     
     // For this example, just use console
-    shell::TestableShell shell(input, console_out, error_out);
+    wshell::TestableShell shell(input, console_out, error_out);
     shell.run();
     
     std::cout << "\nOutput also logged to: /tmp/shell_output.log\n";
@@ -148,11 +148,11 @@ public:
     void run_test(std::string const& commands, 
                   std::string const& expected_output,
                   std::string const& expected_error) {
-        shell::StringInputSource input(commands, "test");
-        shell::StringOutputDestination output("output");
-        shell::StringOutputDestination error("error");
+        wshell::StringInputSource input(commands, "test");
+        wshell::StringOutputDestination output("output");
+        wshell::StringOutputDestination error("error");
         
-        shell::TestableShell shell(input, output, error);
+        wshell::TestableShell shell(input, output, error);
         shell.run();
         
         std::cout << "\n=== Test Results ===\n";
