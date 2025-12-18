@@ -61,7 +61,6 @@ if(ENABLE_FUZZING)
 
   # Fuzz: parser
   add_executable(fuzz_parse fuzz_parse.cpp)
-  target_link_libraries(fuzz_parse PRIVATE shell_core)
   target_compile_options(fuzz_parse PRIVATE ${WSHELL_FUZZ_COMPILE_OPTS})
   target_link_options(fuzz_parse PRIVATE ${WSHELL_FUZZ_LINK_OPTS})
 
