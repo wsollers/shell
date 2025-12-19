@@ -22,12 +22,11 @@ if(ENABLE_BENCHMARKS)
         # Add profiling flags for flame graph generation
         if(NOT MSVC)
             # Enable frame pointers and debug symbols for accurate profiling
-            target_compile_options(bench_command_parser PRIVATE -g -fno-omit-frame-pointer)
-            target_compile_options(bench_shell_core PRIVATE -g -fno-omit-frame-pointer)
+            # Add other targets to here as necessary
+            target_compile_options(bench_parser PRIVATE -g -fno-omit-frame-pointer)
 
             # Disable optimization that might interfere with profiling accuracy
-            target_compile_options(bench_command_parser PRIVATE -O2 -fno-inline-functions)
-            target_compile_options(bench_shell_core PRIVATE -O2 -fno-inline-functions)
+            target_compile_options(bench_parser PRIVATE -O2 -fno-inline-functions)
         endif()
     endif()
 endif()
