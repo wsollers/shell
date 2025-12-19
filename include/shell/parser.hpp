@@ -21,13 +21,13 @@ struct ParseError {
     std::string message;
     std::size_t line{0};
     std::size_t column{0};
-    
+
     ParseError(std::string msg, std::size_t ln = 0, std::size_t col = 0)
         : message(std::move(msg)), line(ln), column(col) {}
-    
+
     [[nodiscard]] std::string to_string() const {
-        return "Parse error at line " + std::to_string(line) 
-               + ", column " + std::to_string(column) 
+        return "Parse error at line " + std::to_string(line)
+               + ", column " + std::to_string(column)
                + ": " + message;
     }
 };
@@ -47,29 +47,40 @@ class Parser {
 public:
     /// Construct parser with input source
     explicit Parser(std::string_view source) : lexer_(source) {}
-    
+
     /// Parse the entire program
     [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError> parse_program();
-    
+
     /// Parse a single line (for REPL mode)
     [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError> parse_line();
-    
+
 private:
     Lexer lexer_;
-    
+
     // Parser methods
     [[nodiscard]] std::expected<StatementNode, ParseError> parse_statement();
     [[nodiscard]] std::expected<std::unique_ptr<CommentNode>, ParseError> parse_comment();
     [[nodiscard]] std::expected<std::unique_ptr<AssignmentNode>, ParseError> parse_assignment();
+    std::expected<Redirection, ParseError> parse_redirection();
+    std::expected<std::unique_ptr<CommandNode>, ParseError> parse_simple_command();
     [[nodiscard]] std::expected<std::unique_ptr<CommandNode>, ParseError> parse_command();
-    
+    std::expected<std::variant<std::unique_ptr<CommandNode>, std::unique_ptr<PipelineNode>>,
+                  ParseError>
+    parse_pipeline_variant();
+    std::expected<std::variant<std::unique_ptr<CommandNode>, std::unique_ptr<PipelineNode>,
+                               std::unique_ptr<SequenceNode>>,
+                  ParseError>
+    parse_list_variant();
+    std::expected<std::unique_ptr<ASTNode>, ParseError> parse_pipeline();
+    std::expected<std::unique_ptr<ASTNode>, ParseError> parse_list();
+
     // Token helpers
     [[nodiscard]] Token current_token();
     [[nodiscard]] Token peek_token();
     [[nodiscard]] bool check(TokenType type);
     [[nodiscard]] bool match(TokenType type);
     void skip_newlines();
-    
+
     [[nodiscard]] ParseError make_error(const std::string& message);
 };
 
@@ -78,14 +89,14 @@ private:
 // ============================================================================
 
 /// Parse a line of shell code
-[[nodiscard]] inline std::expected<std::unique_ptr<ProgramNode>, ParseError> 
+[[nodiscard]] inline std::expected<std::unique_ptr<ProgramNode>, ParseError>
 parse_line(std::string_view source) {
     Parser parser(source);
     return parser.parse_line();
 }
 
 /// Parse a complete program (script)
-[[nodiscard]] inline std::expected<std::unique_ptr<ProgramNode>, ParseError> 
+[[nodiscard]] inline std::expected<std::unique_ptr<ProgramNode>, ParseError>
 parse_program(std::string_view source) {
     Parser parser(source);
     return parser.parse_program();

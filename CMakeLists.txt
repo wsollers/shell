@@ -262,7 +262,9 @@ if(ENABLE_BENCHMARKS)
     endif()
     
     # Add new ChatGPT benchmark files
-    add_executable(shell_bench bench/bench_parser.cpp)
+    add_executable(shell_bench bench/bench_parser.cpp
+            include/shell/ast_printer.hpp
+            src/lib/ast/ast_printer.cpp)
     target_link_libraries(shell_bench PRIVATE wshell_lib benchmark::benchmark)
 endif()
 

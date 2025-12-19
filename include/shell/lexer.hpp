@@ -16,7 +16,7 @@ namespace wshell {
 
 /// Token type enumeration
 enum class TokenType {
-    // Phase 1 - Minimal language
+
     Identifier,      // command names, variable names
     Let,             // 'let' keyword
     Equals,          // '='
@@ -24,12 +24,12 @@ enum class TokenType {
     Newline,         // '\n'
     Whitespace,      // ' ', '\t' (usually skipped)
     EndOfFile,       // End of input
-    
-    // Phase 2+ (future)
-    // Pipe,         // '|'
-    // Redirect,     // '>', '<', '>>'
-    // Semicolon,    // ';'
-    // Background,   // '&'
+
+    //added
+    Pipe,         // '|'
+    Redirect,     // '>', '<', '>>'
+    Semicolon,    // ';'
+    Background,   // '&'
 };
 
 /// Token with type, value, and location
@@ -92,6 +92,7 @@ private:
     void skip_whitespace();
     
     [[nodiscard]] Token lex_comment();
+    Token lex_word();
     [[nodiscard]] Token lex_identifier_or_keyword();
     [[nodiscard]] Token make_token(TokenType type, std::string value = "");
 };

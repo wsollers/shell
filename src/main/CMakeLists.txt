@@ -9,7 +9,9 @@ configure_file(
 
 
 
-add_executable(wshell main.cpp)
+add_executable(wshell main.cpp
+        ../../include/shell/ast_printer.hpp
+        ../lib/ast/ast_printer.cpp)
 
 target_link_libraries(wshell PRIVATE wshell_lib )
 
