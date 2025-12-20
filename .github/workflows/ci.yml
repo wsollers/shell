@@ -499,7 +499,7 @@ jobs:
       run: |
         cmake --build --preset linux-flamegraph --parallel
         # Ensure benchmark executables are built
-        cmake --build build/linux-flamegraph --target bench_command_parser bench_shell_core
+        cmake --build build/linux-flamegraph --target bench_parser
 
     - name: Generate Flame Graphs
       run: |
