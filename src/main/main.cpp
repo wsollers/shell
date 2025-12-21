@@ -34,12 +34,10 @@ int main(int argc, char* argv[]) {
         std::cout << "No configuration file found at " << config_path.string() << "\n";
     }
 
-    // Use std::span for modern C++ argument processing
     std::span<char*> args(argv, static_cast<std::size_t>(argc));
-
-    // Process command line arguments using span (skip program name at args[0])
+    //parse args and set flags
     auto command_args = args.subspan(1);
-    
+
     if (!command_args.empty()) {
         //parse args and set flags
     } else {
@@ -49,45 +47,75 @@ int main(int argc, char* argv[]) {
         wshell::StreamOutputDestination stderr_dest(std::cerr, "stderr");
 
         auto prompt = config.get("PS1").value_or("wshell> ");
-        
-        // Create shell interpreter with platform execution
-        wshell::ShellInterpreter<> interpreter(stdout_dest, stderr_dest);
+        auto cont_prompt = config.get("PS2").value_or("> ");
+
+        wshell::ShellInterpreter<wshell::PlatformExecutionPolicy> interpreter(stdout_dest, stderr_dest);
 
         while (true) {
 
+            std::string full_input;
+
+            // --- First prompt (PS1) ---
             if (auto rc = stdout_dest.write(prompt); !rc) {
                 (void)stderr_dest.write("Error writing prompt: " + rc.error() + "\n");
                 break;
             }
-            
-            // Read user input
+
+            // Read first line
             auto input = stdin_source.read_line();
             if (!input) {
                 (void)stderr_dest.write("Error reading input: " + input.error() + "\n");
-                break;  // Exit on read error or EOF
+                break;
             }
 
-            // Check for exit command
+            // Exit command
             if (*input == "exit") {
                 break;
             }
-            
+
+            full_input = *input;
+
             // Skip empty lines
-            if (input->empty() || input->find_first_not_of(" \t") == std::string::npos) {
+            if (full_input.find_first_not_of(" \t") == std::string::npos) {
                 continue;
             }
-            
-            // Parse the input line
-            auto parse_result = wshell::parse_line(*input);
+
+            // --- Try parsing the line ---
+            auto parse_result = wshell::parse_line(full_input);
+
+            // --- Handle continuation ---
+            while (!parse_result &&
+                   parse_result.error().kind_ == wshell::ParseErrorKind::IncompleteInput)
+            {
+                // Print continuation prompt (PS2)
+                if (auto rc = stdout_dest.write(cont_prompt); !rc) {
+                    (void)stderr_dest.write("Error writing prompt: " + rc.error() + "\n");
+                    break;
+                }
+
+                auto next_line = stdin_source.read_line();
+                if (!next_line) {
+                    (void)stderr_dest.write("Error reading input: " + next_line.error() + "\n");
+                    break;
+                }
+
+                // Append with newline (important for multi-line constructs)
+                full_input += "\n";
+                full_input += *next_line;
+
+                // Try parsing again
+                parse_result = wshell::parse_line(full_input);
+            }
+
+            // If still an error (but not incomplete), print it
             if (!parse_result) {
                 (void)stderr_dest.write(parse_result.error().to_string() + "\n");
-                continue;  // Continue on parse error
+                continue;
             }
-            
-            // Execute the parsed program
+
+            // --- Execute the parsed program ---
             int exit_code = interpreter.execute_program(**parse_result);
-            
-            // Optionally display exit code for non-zero results
+
             if (exit_code != 0) {
                 (void)stderr_dest.write("Command exited with code: " + std::to_string(exit_code) + "\n");
             }

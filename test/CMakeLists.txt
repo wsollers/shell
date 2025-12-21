@@ -2,6 +2,7 @@ if(ENABLE_TESTING)
     add_executable(wshell_tests
         test_command_parser.cpp
             ../src/lib/ast/ast_printer.cpp
+            line_continuation_tests.cpp
     )
 
     target_include_directories(wshell_tests

@@ -12,31 +12,30 @@
 
 namespace wshell {
 
-// ============================================================================
-// Parser ConfigError
-// ============================================================================
+enum class ParseErrorKind {
+    SyntaxError,
+    IncompleteInput
+};
+
 
 /// Parse error with location information
 struct ParseError {
-    std::string message;
-    std::size_t line{0};
-    std::size_t column{0};
+    ParseErrorKind kind_;
+    std::string message_;
+    std::size_t line_{0};
+    std::size_t column_{0};
 
-    ParseError(std::string msg, std::size_t ln = 0, std::size_t col = 0)
-        : message(std::move(msg)), line(ln), column(col) {}
+    ParseError(ParseErrorKind theKind = ParseErrorKind::SyntaxError, std::string msg = "Unknown Error.", std::size_t ln = 0, std::size_t col = 0)
+        : kind_{theKind}, message_(std::move(msg)), line_(ln), column_(col) {}
 
     [[nodiscard]] std::string to_string() const {
-        return "Parse error at line " + std::to_string(line)
-               + ", column " + std::to_string(column)
-               + ": " + message;
+        return "Parse error at line " + std::to_string(line_)
+               + ", column " + std::to_string(column_)
+               + ": " + message_;
     }
 };
 
-// ============================================================================
-// Parser - Phase 1 Implementation
-// ============================================================================
 
-/// Parser for Phase 1 shell language
 /// Grammar:
 ///   Program    := Statement*
 ///   Statement  := Comment | Assignment | Command | Newline
@@ -46,7 +45,7 @@ struct ParseError {
 class Parser {
 public:
     /// Construct parser with input source
-    explicit Parser(std::string_view source) : lexer_(source) {}
+    explicit Parser(std::string_view source, bool repl_mode = true) : lexer_(source), repl_mode_ {repl_mode} {};
 
     /// Parse the entire program
     [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError> parse_program();
@@ -56,6 +55,8 @@ public:
 
 private:
     Lexer lexer_;
+    bool repl_mode_;
+
 
     // Parser methods
     [[nodiscard]] std::expected<StatementNode, ParseError> parse_statement();
@@ -71,17 +72,20 @@ private:
                                std::unique_ptr<SequenceNode>>,
                   ParseError>
     parse_list_variant();
-    std::expected<std::unique_ptr<ASTNode>, ParseError> parse_pipeline();
-    std::expected<std::unique_ptr<ASTNode>, ParseError> parse_list();
+
 
     // Token helpers
     [[nodiscard]] Token current_token();
+    bool check(TokenType type);
     [[nodiscard]] Token peek_token();
-    [[nodiscard]] bool check(TokenType type);
-    [[nodiscard]] bool match(TokenType type);
-    void skip_newlines();
+    [[nodiscard]] Token current_token() const;
+    [[nodiscard]] bool check(TokenType type) const;
 
-    [[nodiscard]] ParseError make_error(const std::string& message);
+    void advance();
+    [[nodiscard]] bool match(TokenType t);    void skip_newlines();
+
+
+    [[nodiscard]] ParseError make_error(ParseErrorKind kind, const std::string& message);
 };
 
 // ============================================================================
@@ -91,14 +95,14 @@ private:
 /// Parse a line of shell code
 [[nodiscard]] inline std::expected<std::unique_ptr<ProgramNode>, ParseError>
 parse_line(std::string_view source) {
-    Parser parser(source);
+    Parser parser(source, true);
     return parser.parse_line();
 }
 
 /// Parse a complete program (script)
 [[nodiscard]] inline std::expected<std::unique_ptr<ProgramNode>, ParseError>
 parse_program(std::string_view source) {
-    Parser parser(source);
+    Parser parser(source, false);
     return parser.parse_program();
 }
 

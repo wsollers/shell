@@ -1,3 +1,5 @@
+#include <string>
+
 #include <gtest/gtest.h>
 
 #include "shell/parser.hpp"
@@ -19,8 +21,8 @@ static void assert_parse_ok_and_ast_equals(
         const auto& err = result.error();
         FAIL() << "Parse failed for input:\n"
                << input << "\n"
-               << "Error: " << err.message << "\n"
-               << "At line " << err.line << ", column " << err.column;
+               << "Error: " << err.message_ << "\n"
+               << "At line " << err.line_ << ", column " << err.column_;
     }
 
     const ProgramNode& program = *result.value();
@@ -43,8 +45,8 @@ static void assert_parse_program_ok_and_ast_equals(
         const auto& err = result.error();
         FAIL() << "Parse failed for input:\n"
                << input << "\n"
-               << "Error: " << err.message << "\n"
-               << "At line " << err.line << ", column " << err.column;
+               << "Error: " << err.message_ << "\n"
+               << "At line " << err.line_ << ", column " << err.column_;
     }
 
     const ProgramNode& program = *result.value();
@@ -383,4 +385,5 @@ TEST(ParserTests, Tricky_EmptyProgram) {
     ASSERT_TRUE(result.has_value());
     ASSERT_TRUE(result.value()->empty());
 }
+
 
