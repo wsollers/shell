@@ -8,123 +8,177 @@
 #include "ast.hpp"
 #include "command_model.hpp"
 #include "output_destination.hpp"
-#include <map>
-#include <string>
+
 #include <expected>
+#include <map>
+#include <optional>
+#include <string>
+#include <utility>
 
 namespace wshell {
+
+template<class... Ts>
+struct overloaded : Ts... {
+    using Ts::operator()...;
+};
+
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 // ============================================================================
 // Shell Interpreter - Processes AST and manages shell state
 // ============================================================================
 
-/// High-level interpreter that processes AST nodes and manages variables
-/// Uses Executor<Policy> for actual command execution
+/// High-level interpreter that processes AST nodes and manages variables.
+/// Uses Executor<Policy> for actual command execution.
 template<ExecutionPolicy Policy = PlatformExecutionPolicy>
 class ShellInterpreter {
 public:
     /// Construct with output destination for messages
     explicit ShellInterpreter(wshell::IOutputDestination& output,
-                             wshell::IOutputDestination& error_output)
-        : output_(output), error_output_(error_output) {}
-    
+                              wshell::IOutputDestination& error_output)
+        : executor_{},
+          variables_{},
+          output_(output),
+          error_output_(error_output) {}
+
     /// Execute a parsed program (AST)
     [[nodiscard]] int execute_program(const ProgramNode& program) {
         int last_exit_code = platform::EXIT_SUCCESS_STATUS;
-        
+
         for (const auto& statement : program.statements) {
             auto result = execute_statement(statement);
             if (result) {
                 last_exit_code = *result;
             } else {
-                // ConfigError executing statement
                 (void)error_output_.write("ConfigError: " + result.error() + "\n");
                 last_exit_code = platform::EXIT_FAILURE_STATUS;
             }
         }
-        
+
         return last_exit_code;
     }
-    
+
     /// Get a variable value
-    [[nodiscard]] std::optional<std::string> get_variable(const std::string& name) const {
+    [[nodiscard]] std::optional<std::string>
+    get_variable(const std::string& name) const {
         auto it = variables_.find(name);
-        if (it != variables_.end()) {
+        if (it != variables_.end())
             return it->second;
-        }
         return std::nullopt;
     }
-    
+
     /// Set a variable value
     void set_variable(const std::string& name, const std::string& value) {
         variables_[name] = value;
     }
-    
+
     /// Get all variables
-    [[nodiscard]] const std::map<std::string, std::string>& variables() const noexcept {
+    [[nodiscard]] const std::map<std::string, std::string>&
+    variables() const noexcept {
         return variables_;
     }
-    
+
     /// Clear all variables
     void clear_variables() {
         variables_.clear();
     }
-    
+
     /// Get reference to underlying executor (for testing)
     [[nodiscard]] Executor<Policy>& executor() noexcept { return executor_; }
     [[nodiscard]] const Executor<Policy>& executor() const noexcept { return executor_; }
-    
+
 private:
     Executor<Policy> executor_;
     std::map<std::string, std::string> variables_;
     wshell::IOutputDestination& output_;
     wshell::IOutputDestination& error_output_;
-    
+
     /// Execute a single statement
-    [[nodiscard]] std::expected<int, std::string> execute_statement(const StatementNode& statement) {
-        return std::visit([this](const auto& node) -> std::expected<int, std::string> {
-            using T = std::decay_t<decltype(node)>;
-            
-            if constexpr (std::is_same_v<T, std::unique_ptr<CommentNode>>) {
-                return execute_comment(*node);
-            } else if constexpr (std::is_same_v<T, std::unique_ptr<AssignmentNode>>) {
-                return execute_assignment(*node);
-            } else if constexpr (std::is_same_v<T, std::unique_ptr<CommandNode>>) {
-                return execute_command(*node);
-            } else {
-                return std::unexpected("Unknown statement type");
+    [[nodiscard]] std::expected<int, std::string>
+    execute_statement(const StatementNode& statement) {
+        return std::visit(overloaded{
+
+            [&](const CommentNode& node) -> std::expected<int, std::string> {
+                return execute_comment(node);
+            },
+
+            [&](const AssignmentNode& node) -> std::expected<int, std::string> {
+                return execute_assignment(node);
+            },
+
+            [&](const CommandNode& node) -> std::expected<int, std::string> {
+                return execute_command(node);
+            },
+
+            [&](const PipelineNode& node) -> std::expected<int, std::string> {
+                return execute_pipeline(node);
+            },
+
+            [&](const SequenceNode& node) -> std::expected<int, std::string> {
+                return execute_sequence(node);
             }
+
         }, statement);
     }
-    
+
     /// Execute a comment (no-op)
-    [[nodiscard]] std::expected<int, std::string> execute_comment(const CommentNode& node) {
-        // Comments are no-ops
-        (void)node;
+    [[nodiscard]] std::expected<int, std::string>
+    execute_comment(const CommentNode& node) {
+        (void)node; // comments are no-ops
         return platform::EXIT_SUCCESS_STATUS;
     }
-    
+
     /// Execute an assignment (let var = value)
-    [[nodiscard]] std::expected<int, std::string> execute_assignment(const AssignmentNode& node) {
+    [[nodiscard]] std::expected<int, std::string>
+    execute_assignment(const AssignmentNode& node) {
         set_variable(node.variable, node.value);
         return platform::EXIT_SUCCESS_STATUS;
     }
-    
+
     /// Execute a command
-    [[nodiscard]] std::expected<int, std::string> execute_command(const CommandNode& node) {
-        // Build Command from command_model
+    [[nodiscard]] std::expected<int, std::string>
+    execute_command(const CommandNode& node) {
         Command cmd;
         cmd.executable = node.command_name;
-        cmd.args = node.arguments;
-        
-        // Execute command
+        cmd.args       = node.arguments;
+
         auto result = executor_.execute(cmd);
-        
-        if (result.error_message) {
+
+        if (result.error_message)
             return std::unexpected(*result.error_message);
-        }
-        
+
         return result.exit_code;
+    }
+
+    /// Execute a pipeline (currently sequential, left-to-right)
+    [[nodiscard]] std::expected<int, std::string>
+    execute_pipeline(const PipelineNode& node) {
+        int last = platform::EXIT_SUCCESS_STATUS;
+
+        for (const auto& cmd : node.commands) {
+            auto result = execute_command(cmd);
+            if (!result)
+                return result;
+            last = *result;
+        }
+
+        return last;
+    }
+
+    /// Execute a sequence of statements: A ; B ; C
+    [[nodiscard]] std::expected<int, std::string>
+    execute_sequence(const SequenceNode& node) {
+        int last = platform::EXIT_SUCCESS_STATUS;
+
+        for (const auto& stmt : node.statements) {
+            auto result = execute_statement(stmt);
+            if (!result)
+                return result;
+            last = *result;
+        }
+
+        return last;
     }
 };
 

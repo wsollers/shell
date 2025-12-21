@@ -4,6 +4,7 @@
 #include "shell/parser.hpp"
 #include "shell/lexer.hpp"
 #include "shell/ast.hpp"
+#include "shell/ast_printer.hpp"
 
 #include <utility>
 #include <variant>
@@ -11,21 +12,6 @@
 namespace wshell {
 
 namespace {
-
-// Internal helper variants for parser stages:
-// - A pipeline is either a single Command or a PipelineNode.
-// - A list (sequence) is either Command, Pipeline, or SequenceNode.
-
-using PipelineVariant = std::variant<
-    std::unique_ptr<CommandNode>,
-    std::unique_ptr<PipelineNode>
->;
-
-using ListVariant = std::variant<
-    std::unique_ptr<CommandNode>,
-    std::unique_ptr<PipelineNode>,
-    std::unique_ptr<SequenceNode>
->;
 
 RedirectKind redirect_kind_from_lexeme(const std::string& s) {
     if (s == ">")  return RedirectKind::Output;
@@ -79,7 +65,7 @@ ParseError Parser::make_error(ParseErrorKind theKind, const std::string& msg) {
 // Comments
 // -----------------------------------------------------------------------------
 
-std::expected<std::unique_ptr<CommentNode>, ParseError>
+std::expected<CommentNode, ParseError>
 Parser::parse_comment() {
     if (!check(TokenType::Comment)) {
         return std::unexpected(make_error(ParseErrorKind::SyntaxError,
@@ -89,11 +75,12 @@ Parser::parse_comment() {
     Token tok = lexer_.next_token(); // consume the comment token
     return make_comment(tok.value);
 }
+
 // -----------------------------------------------------------------------------
 // Assignments: let x = value
 // -----------------------------------------------------------------------------
 
-std::expected<std::unique_ptr<AssignmentNode>, ParseError>
+std::expected<AssignmentNode, ParseError>
 Parser::parse_assignment() {
     // 'let'
     if (!match(TokenType::Let)) {
@@ -204,11 +191,12 @@ Parser::parse_redirection() {
 // Simple command: name + args (no redirects, no &, no |, no ;)
 // -----------------------------------------------------------------------------
 
-std::expected<std::unique_ptr<CommandNode>, ParseError>
+std::expected<CommandNode, ParseError>
 Parser::parse_simple_command() {
     Token cmd_tok = current_token();
     if (cmd_tok.type != TokenType::Identifier) {
-        return std::unexpected(make_error(ParseErrorKind::SyntaxError, "Expected command name"));
+        return std::unexpected(make_error(ParseErrorKind::SyntaxError,
+                                          "Expected command name"));
     }
 
     std::string name = cmd_tok.value;
@@ -241,14 +229,14 @@ Parser::parse_simple_command() {
 // Full command: simple + redirections + optional background
 // -----------------------------------------------------------------------------
 
-std::expected<std::unique_ptr<CommandNode>, ParseError>
+std::expected<CommandNode, ParseError>
 Parser::parse_command() {
     auto simple = parse_simple_command();
     if (!simple) {
         return std::unexpected(simple.error());
     }
 
-    auto cmd = std::move(*simple);
+    CommandNode cmd = std::move(*simple);
 
     // Attach redirections
     while (check(TokenType::Redirect)) {
@@ -256,12 +244,12 @@ Parser::parse_command() {
         if (!redir) {
             return std::unexpected(redir.error());
         }
-        cmd->redirections.push_back(std::move(*redir));
+        cmd.redirections.push_back(std::move(*redir));
     }
 
     // Optional background flag
     if (match(TokenType::Background)) {
-        cmd->background = true;
+        cmd.background = true;
     }
 
     return cmd;
@@ -271,14 +259,14 @@ Parser::parse_command() {
 // Pipeline: cmd ('|' cmd)*
 // -----------------------------------------------------------------------------
 
-std::expected<PipelineVariant, ParseError>
-Parser::parse_pipeline_variant() {
+std::expected<StatementNode, ParseError>
+Parser::parse_pipeline() {
     auto first = parse_command();
     if (!first) {
         return std::unexpected(first.error());
     }
 
-    std::vector<std::unique_ptr<CommandNode>> cmds;
+    std::vector<CommandNode> cmds;
     cmds.push_back(std::move(*first));
 
     while (check(TokenType::Pipe)) {
@@ -310,45 +298,32 @@ Parser::parse_pipeline_variant() {
     }
 
     if (cmds.size() == 1) {
-        return PipelineVariant{ std::move(cmds.front()) };
+        return StatementNode{ std::move(cmds.front()) };
     }
 
-    auto pipeline = make_pipeline(std::move(cmds));
-    return PipelineVariant{ std::move(pipeline) };
+    PipelineNode pipeline = make_pipeline(std::move(cmds));
+    return StatementNode{ std::move(pipeline) };
 }
 
 // -----------------------------------------------------------------------------
 // List / sequence: pipeline (';' pipeline)*
 // -----------------------------------------------------------------------------
 
-std::expected<ListVariant, ParseError>
-Parser::parse_list_variant() {
-    auto first_pipe = parse_pipeline_variant();
+std::expected<StatementNode, ParseError>
+Parser::parse_list() {
+    auto first_pipe = parse_pipeline();
     if (!first_pipe.has_value()) {
         return std::unexpected(first_pipe.error());
     }
 
     // If there is no semicolon, return the pipeline normally
     if (!check(TokenType::Semicolon)) {
-        return std::visit(
-            [](auto ptr) -> ListVariant {
-                return ListVariant{ std::move(ptr) };
-            },
-            std::move(*first_pipe)
-        );
+        return *first_pipe;
     }
 
     // There is at least one ';' → build a SequenceNode.
-    std::vector<std::unique_ptr<ASTNode>> stmts;
-
-    // Move first pipeline into ASTNode
-    std::visit(
-        [&](auto& ptr) {
-            std::unique_ptr<ASTNode> base(ptr.release());
-            stmts.push_back(std::move(base));
-        },
-        *first_pipe
-    );
+    std::vector<StatementNode> stmts;
+    stmts.push_back(std::move(*first_pipe));
 
     while (match(TokenType::Semicolon)) {
 
@@ -368,7 +343,7 @@ Parser::parse_list_variant() {
             }
         }
 
-        auto next_pipe = parse_pipeline_variant();
+        auto next_pipe = parse_pipeline();
         if (!next_pipe.has_value()) {
             return std::unexpected(next_pipe.error());
         }
@@ -382,23 +357,13 @@ Parser::parse_list_variant() {
                 peek_token().line,
                 peek_token().column
             });
-            }
-
-        if (!next_pipe) {
-            return std::unexpected(next_pipe.error());
         }
 
-        std::visit(
-            [&](auto& ptr) {
-                std::unique_ptr<ASTNode> base(ptr.release());
-                stmts.push_back(std::move(base));
-            },
-            *next_pipe
-        );
+        stmts.push_back(std::move(*next_pipe));
     }
 
-    auto seq = make_sequence(std::move(stmts));
-    return ListVariant{ std::move(seq) };
+    SequenceNode seq = make_sequence(std::move(stmts));
+    return StatementNode{ std::move(seq) };
 }
 
 // -----------------------------------------------------------------------------
@@ -410,7 +375,8 @@ Parser::parse_statement() {
     skip_newlines();
 
     if (check(TokenType::EndOfFile)) {
-        return std::unexpected(make_error(ParseErrorKind::SyntaxError, "Unexpected end of input"));
+        return std::unexpected(make_error(ParseErrorKind::SyntaxError,
+                                          "Unexpected end of input"));
     }
 
     // Comment
@@ -432,18 +398,12 @@ Parser::parse_statement() {
     }
 
     // Command / Pipeline / Sequence
-    auto list = parse_list_variant();
+    auto list = parse_list();
     if (!list) {
         return std::unexpected(list.error());
     }
 
-    // Convert ListVariant into StatementNode variant (same underlying node types)
-    return std::visit(
-        [](auto ptr) -> StatementNode {
-            return StatementNode{ std::move(ptr) };
-        },
-        std::move(*list)
-    );
+    return *list;
 }
 
 // -----------------------------------------------------------------------------
@@ -513,7 +473,7 @@ Parser::parse_line() {
                 last.line,
                 last.column
             });
-            }
+        }
 
         // Otherwise it's a real syntax error
         return std::unexpected(ParseError{

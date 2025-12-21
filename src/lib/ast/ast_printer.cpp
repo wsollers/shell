@@ -5,6 +5,10 @@ namespace wshell {
 
 namespace {
 
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+
 void indent(std::ostream& os, int level) {
     for (int i = 0; i < level; ++i)
         os << "  ";
@@ -43,28 +47,53 @@ void print_command(const CommandNode& cmd, std::ostream& os, int indent_level) {
     }
 }
 
+// Forward declaration
+void print_node(const StatementNode& stmt, std::ostream& os, int indent_level);
+
 void print_pipeline(const PipelineNode& pipe, std::ostream& os, int indent_level) {
     indent(os, indent_level);
     os << "Pipeline:\n";
     for (const auto& cmd : pipe.commands)
-        print_ast(*cmd, os, indent_level + 1);
+        print_command(cmd, os, indent_level + 1);
 }
 
 void print_sequence(const SequenceNode& seq, std::ostream& os, int indent_level) {
     indent(os, indent_level);
     os << "Sequence:\n";
     for (const auto& stmt : seq.statements)
-        print_ast(*stmt, os, indent_level + 1);
+        print_node(stmt, os, indent_level + 1);
 }
 
-void print_assignment(const AssignmentNode& a, std::ostream& os, int indent_level) {
-    indent(os, indent_level);
-    os << "Assignment: " << a.variable << " = " << a.value << "\n";
-}
+// -----------------------------------------------------------------------------
+// Core variant printer
+// -----------------------------------------------------------------------------
 
-void print_comment(const CommentNode& c, std::ostream& os, int indent_level) {
-    indent(os, indent_level);
-    os << "Comment: " << c.text << "\n";
+void print_node(const StatementNode& stmt, std::ostream& os, int indent_level) {
+    std::visit([&](auto const& node) {
+        using T = std::decay_t<decltype(node)>;
+
+        if constexpr (std::is_same_v<T, CommentNode>) {
+            indent(os, indent_level);
+            os << "Comment: " << node.text << "\n";
+
+        } else if constexpr (std::is_same_v<T, AssignmentNode>) {
+            indent(os, indent_level);
+            os << "Assignment: " << node.variable << " = " << node.value << "\n";
+
+        } else if constexpr (std::is_same_v<T, CommandNode>) {
+            print_command(node, os, indent_level);
+
+        } else if constexpr (std::is_same_v<T, PipelineNode>) {
+            print_pipeline(node, os, indent_level);
+
+        } else if constexpr (std::is_same_v<T, SequenceNode>) {
+            print_sequence(node, os, indent_level);
+
+        } else {
+            indent(os, indent_level);
+            os << "<Unknown node>\n";
+        }
+    }, stmt);
 }
 
 } // namespace
@@ -73,34 +102,18 @@ void print_comment(const CommentNode& c, std::ostream& os, int indent_level) {
 // Public API
 // -----------------------------------------------------------------------------
 
-void print_ast(const ASTNode& node, std::ostream& os, int indent_level) {
-    if (auto* c = dynamic_cast<const CommentNode*>(&node))
-        return print_comment(*c, os, indent_level);
-
-    if (auto* a = dynamic_cast<const AssignmentNode*>(&node))
-        return print_assignment(*a, os, indent_level);
-
-    if (auto* cmd = dynamic_cast<const CommandNode*>(&node))
-        return print_command(*cmd, os, indent_level);
-
-    if (auto* p = dynamic_cast<const PipelineNode*>(&node))
-        return print_pipeline(*p, os, indent_level);
-
-    if (auto* s = dynamic_cast<const SequenceNode*>(&node))
-        return print_sequence(*s, os, indent_level);
-
-    indent(os, indent_level);
-    os << "<Unknown AST node>\n";
+void print_statement(const StatementNode& stmt, std::ostream& os, int indent_level) {
+    print_node(stmt, os, indent_level);
 }
 
 void print_program(const ProgramNode& program, std::ostream& os) {
     for (const auto& stmt : program.statements)
-        std::visit([&](auto const& ptr) { print_ast(*ptr, os, 0); }, stmt);
+        print_node(stmt, os, 0);
 }
 
-std::string to_string(const ASTNode& node) {
+std::string to_string(const StatementNode& stmt) {
     std::ostringstream oss;
-    print_ast(node, oss, 0);
+    print_node(stmt, oss, 0);
     return oss.str();
 }
 

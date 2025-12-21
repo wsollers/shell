@@ -3,12 +3,15 @@
 
 #pragma once
 
-#include "lexer.hpp"
-#include "ast.hpp"
 #include <expected>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
+
+#include "ast.hpp"
+#include "ast_printer.hpp"
+#include "lexer.hpp"
 
 namespace wshell {
 
@@ -17,7 +20,6 @@ enum class ParseErrorKind {
     IncompleteInput
 };
 
-
 /// Parse error with location information
 struct ParseError {
     ParseErrorKind kind_;
@@ -25,67 +27,63 @@ struct ParseError {
     std::size_t line_{0};
     std::size_t column_{0};
 
-    ParseError(ParseErrorKind theKind = ParseErrorKind::SyntaxError, std::string msg = "Unknown Error.", std::size_t ln = 0, std::size_t col = 0)
+    ParseError(ParseErrorKind theKind = ParseErrorKind::SyntaxError,
+               std::string msg = "Unknown Error.",
+               std::size_t ln = 0,
+               std::size_t col = 0)
         : kind_{theKind}, message_(std::move(msg)), line_(ln), column_(col) {}
 
     [[nodiscard]] std::string to_string() const {
         return "Parse error at line " + std::to_string(line_)
-               + ", column " + std::to_string(column_)
-               + ": " + message_;
+             + ", column " + std::to_string(column_)
+             + ": " + message_;
     }
 };
 
-
 /// Grammar:
 ///   Program    := Statement*
-///   Statement  := Comment | Assignment | Command | Newline
+///   Statement  := Comment | Assignment | Command | Pipeline | Sequence
 ///   Comment    := '#' .*
 ///   Assignment := 'let' Identifier '=' Value
 ///   Command    := Identifier Identifier*
 class Parser {
 public:
     /// Construct parser with input source
-    explicit Parser(std::string_view source, bool repl_mode = true) : lexer_(source), repl_mode_ {repl_mode} {};
+    explicit Parser(std::string_view source, bool repl_mode = true)
+        : lexer_(source), repl_mode_{repl_mode} {}
 
     /// Parse the entire program
-    [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError> parse_program();
+    [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError>
+    parse_program();
 
     /// Parse a single line (for REPL mode)
-    [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError> parse_line();
+    [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError>
+    parse_line();
 
 private:
     Lexer lexer_;
     bool repl_mode_;
 
-
-    // Parser methods
+    // Parser methods (all updated to match the new AST)
     [[nodiscard]] std::expected<StatementNode, ParseError> parse_statement();
-    [[nodiscard]] std::expected<std::unique_ptr<CommentNode>, ParseError> parse_comment();
-    [[nodiscard]] std::expected<std::unique_ptr<AssignmentNode>, ParseError> parse_assignment();
-    std::expected<Redirection, ParseError> parse_redirection();
-    std::expected<std::unique_ptr<CommandNode>, ParseError> parse_simple_command();
-    [[nodiscard]] std::expected<std::unique_ptr<CommandNode>, ParseError> parse_command();
-    std::expected<std::variant<std::unique_ptr<CommandNode>, std::unique_ptr<PipelineNode>>,
-                  ParseError>
-    parse_pipeline_variant();
-    std::expected<std::variant<std::unique_ptr<CommandNode>, std::unique_ptr<PipelineNode>,
-                               std::unique_ptr<SequenceNode>>,
-                  ParseError>
-    parse_list_variant();
-
+    [[nodiscard]] std::expected<CommentNode, ParseError> parse_comment();
+    [[nodiscard]] std::expected<AssignmentNode, ParseError> parse_assignment();
+    [[nodiscard]] std::expected<Redirection, ParseError> parse_redirection();
+    [[nodiscard]] std::expected<CommandNode, ParseError> parse_simple_command();
+    [[nodiscard]] std::expected<CommandNode, ParseError> parse_command();
+    [[nodiscard]] std::expected<StatementNode, ParseError> parse_pipeline();
+    [[nodiscard]] std::expected<StatementNode, ParseError> parse_list();
 
     // Token helpers
+    [[nodiscard]] Token peek_token();
     [[nodiscard]] Token current_token();
     bool check(TokenType type);
-    [[nodiscard]] Token peek_token();
-    [[nodiscard]] Token current_token() const;
-    [[nodiscard]] bool check(TokenType type) const;
-
     void advance();
-    [[nodiscard]] bool match(TokenType t);    void skip_newlines();
+    [[nodiscard]] bool match(TokenType t);
+    void skip_newlines();
 
-
-    [[nodiscard]] ParseError make_error(ParseErrorKind kind, const std::string& message);
+    [[nodiscard]] ParseError make_error(ParseErrorKind kind,
+                                        const std::string& message);
 };
 
 // ============================================================================
@@ -96,14 +94,22 @@ private:
 [[nodiscard]] inline std::expected<std::unique_ptr<ProgramNode>, ParseError>
 parse_line(std::string_view source) {
     Parser parser(source, true);
-    return parser.parse_line();
+    auto result = parser.parse_line();
+    if (result.has_value()) {
+        print_program(*result.value(), std::cout);
+    }
+    return result;
 }
 
 /// Parse a complete program (script)
 [[nodiscard]] inline std::expected<std::unique_ptr<ProgramNode>, ParseError>
 parse_program(std::string_view source) {
     Parser parser(source, false);
-    return parser.parse_program();
+    auto result = parser.parse_program();
+    if (result.has_value()) {
+        print_program(*result.value(), std::cout);
+    }
+    return result;
 }
 
 } // namespace wshell
