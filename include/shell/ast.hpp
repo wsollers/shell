@@ -15,9 +15,9 @@ namespace wshell {
 // ============================================================================
 
 enum class RedirectKind {
-    Input,      // <
-    Output,     // >
-    Append      // >>
+    Input,               // <
+    OutputTruncate,      // >
+    OutputAppend               // >>
 };
 
 struct Redirection {

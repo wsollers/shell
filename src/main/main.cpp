@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
                     break;
                 }
 
-                // Append with newline (important for multi-line constructs)
+                // OutputAppend with newline (important for multi-line constructs)
                 full_input += "\n";
                 full_input += *next_line;
 

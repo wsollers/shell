@@ -4,16 +4,19 @@
 // shell_interpreter.hpp - High-level shell interpreter that processes AST
 #pragma once
 
-#include "execution_policy.hpp"
-#include "ast.hpp"
-#include "command_model.hpp"
-#include "output_destination.hpp"
-
 #include <expected>
-#include <map>
 #include <optional>
+
+#include <map>
 #include <string>
 #include <utility>
+
+#include "ast.hpp"
+#include "built_ins.hpp"
+#include "command_model.hpp"
+#include "execution_policy.hpp"
+#include "history.hpp"
+#include "output_destination.hpp"
 
 namespace wshell {
 
@@ -40,7 +43,7 @@ public:
         : executor_{},
           variables_{},
           output_(output),
-          error_output_(error_output) {}
+          error_output_(error_output), builtins_{}, history_{} {}
 
     /// Execute a parsed program (AST)
     [[nodiscard]] int execute_program(const ProgramNode& program) {
@@ -93,6 +96,9 @@ private:
     std::map<std::string, std::string> variables_;
     wshell::IOutputDestination& output_;
     wshell::IOutputDestination& error_output_;
+    wshell::BuiltIns builtins_;
+    wshell::History history_;
+
 
     /// Execute a single statement
     [[nodiscard]] std::expected<int, std::string>
@@ -136,6 +142,34 @@ private:
         return platform::EXIT_SUCCESS_STATUS;
     }
 
+    /*
+    struct Command {
+    std::filesystem::path executable;                 // absolute or relative; resolution is exec-layer policy
+    std::optional<std::filesystem::path> work_dir;    // nullopt = inherit current working directory
+
+    // argv[0] policy: keep argv[0] separate (recommended).
+    // exec-layer can build argv = {executable.filename().string(), args...} or use provided "argv0".
+    std::optional<std::string> argv0;
+    Strings args;
+
+    // env policy: if env_inherit is true, overlay "env" onto current environment.
+    // if false, use exactly env.
+    bool env_inherit{true};
+    EnvMap env;
+
+    // stdio endpoints
+    IO stdin_  { InheritTarget{} };
+    IO stdout_ { InheritTarget{} };
+    IO stderr_ { InheritTarget{} };
+};
+
+    struct CommandNode {
+    std::string command_name;
+    std::vector<std::string> arguments;
+    std::vector<Redirection> redirections;
+    bool background = false;
+};
+    */
     /// Execute a command
     [[nodiscard]] std::expected<int, std::string>
     execute_command(const CommandNode& node) {
@@ -143,11 +177,24 @@ private:
         cmd.executable = node.command_name;
         cmd.args       = node.arguments;
 
+        if (!node.redirections.empty()) {
+            for (const auto& redir : node.redirections) {
+                //cmd.redirections.push_back(redir);
+                if (redir.kind == RedirectKind::Input) {
+                    cmd.stdin_ = from_file(redir.target);
+                } else if (redir.kind == RedirectKind::OutputTruncate) {
+                    cmd.stdout_ = to_file(redir.target, OpenMode::WriteTruncate);
+                } else if (redir.kind == RedirectKind::OutputAppend) {
+                    cmd.stdout_ = to_file(redir.target, OpenMode::WriteAppend);
+                }
+            }
+        }
+
         auto result = executor_.execute(cmd);
 
-        if (result.error_message)
+        if (result.error_message) {
             return std::unexpected(*result.error_message);
-
+        }
         return result.exit_code;
     }
 
@@ -158,8 +205,9 @@ private:
 
         for (const auto& cmd : node.commands) {
             auto result = execute_command(cmd);
-            if (!result)
+            if (!result) {
                 return result;
+            }
             last = *result;
         }
 
@@ -173,8 +221,9 @@ private:
 
         for (const auto& stmt : node.statements) {
             auto result = execute_statement(stmt);
-            if (!result)
+            if (!result) {
                 return result;
+            }
             last = *result;
         }
 

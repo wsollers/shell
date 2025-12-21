@@ -13,7 +13,7 @@
 namespace wshell {
 
 //==============================================================================
-// Output Destination Abstraction (Dependency Injection Interface)
+// OutputTruncate Destination Abstraction (Dependency Injection Interface)
 //==============================================================================
 
 /// @brief Abstract interface for text/content output destinations
@@ -37,7 +37,7 @@ public:
 };
 
 //==============================================================================
-// Concrete Output Destinations
+// Concrete OutputTruncate Destinations
 //==============================================================================
 
 /// @brief Stream-based output destination (for stdout, stderr, etc.)
@@ -78,7 +78,7 @@ private:
 class FileOutputDestination final : public IOutputDestination {
 public:
     enum class Mode {
-        Append,     ///< Append to existing file
+        Append,     ///< OutputAppend to existing file
         Truncate    ///< Overwrite existing file
     };
     

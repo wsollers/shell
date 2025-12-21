@@ -18,8 +18,8 @@ void print_redirection(const Redirection& r, std::ostream& os, int indent_level)
     indent(os, indent_level);
     switch (r.kind) {
         case RedirectKind::Input:  os << "< ";  break;
-        case RedirectKind::Output: os << "> ";  break;
-        case RedirectKind::Append: os << ">> "; break;
+        case RedirectKind::OutputTruncate: os << "> ";  break;
+        case RedirectKind::OutputAppend: os << ">> "; break;
     }
     os << r.target << "\n";
 }

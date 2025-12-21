@@ -14,8 +14,8 @@ namespace wshell {
 namespace {
 
 RedirectKind redirect_kind_from_lexeme(const std::string& s) {
-    if (s == ">")  return RedirectKind::Output;
-    if (s == ">>") return RedirectKind::Append;
+    if (s == ">")  return RedirectKind::OutputTruncate;
+    if (s == ">>") return RedirectKind::OutputAppend;
     return RedirectKind::Input; // "<"
 }
 
