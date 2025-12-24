@@ -198,13 +198,9 @@ private:
         }
 
         auto result = executor_.execute(cmd);
+        std::cout << "Executed command: " << cmd.executable << "\n";
+        std::cout << result << "\n";
 
-        if (result.error_message) {
-            return std::unexpected(*result.error_message);
-            std::cout << "Error executing command: " << *result.error_message << "\n";
-        } else {
-            std::cout << "Success executing command: " << cmd.executable << "\n";
-        }
         return result.exit_code;
     }
 

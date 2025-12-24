@@ -29,6 +29,14 @@ struct ExecutionResult {
     [[nodiscard]] bool is_failure() const noexcept {
         return !is_success();
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const ExecutionResult& result) {
+        if (result.error_message.has_value()) {
+            return os << result.error_code << ": " << result.error_message.value() << ", EXIT_CODE: " << result.exit_code;
+        } else {
+            return os << result.error_code << ": " << ", EXIT_CODE: " << result.exit_code;
+        }
+    }
 };
 
 // ============================================================================
@@ -50,7 +58,8 @@ concept ExecutionPolicy = requires(T policy, const Command& cmd, const Pipeline&
 /// Platform-specific execution policy
 /// Implementation is in exec_posix.cpp (Linux/macOS) or exec_win32.cpp (Windows)
 struct PlatformExecutionPolicy {
-
+    [[nodiscard]] static std::vector<const char*> convertEnvironment(const Command& cmd);
+    [[nodiscard]] static std::vector<const char*> convertArgv(const Command& cmd);
     /// Execute a single command
     ExecutionResult execute(const Command& cmd) const;
     

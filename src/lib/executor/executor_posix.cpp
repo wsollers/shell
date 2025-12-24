@@ -122,6 +122,39 @@ class EnvironmentCache {
     std::mutex mutex_;
 };
 
+std::vector<const char*>
+PlatformExecutionPolicy::convertEnvironment(const Command& cmd) {
+    // Set up environment variables
+    std::unordered_map<std::string, std::string> env_map;
+    env_map.insert(cmd.env.begin(), cmd.env.end());
+    if (cmd.env_inherit) {
+        // Add current environment to env
+        auto current_env = EnvironmentCache::instance().get_all();
+        env_map.insert(current_env.begin(), current_env.end());
+    }
+    std::vector<const char*> envp;
+    for (const auto& arg : env_map) {
+        envp.push_back((arg.first+ "=" + arg.second).c_str());
+    }
+    envp.push_back(nullptr);  // NULL-terminated
+
+    return envp;
+}
+
+std::vector<const char*>
+PlatformExecutionPolicy::convertArgv(const Command& cmd) {
+    // Convert command args to C-style argv
+    std::vector<const char*> argv;
+    argv.push_back(cmd.executable.c_str());
+    for (const auto& arg : cmd.args) {
+        argv.push_back(arg.c_str());
+    }
+    argv.insert(argv.begin(), cmd.executable.filename().c_str());
+    argv.push_back(nullptr);  // NULL-terminated
+
+    return argv;
+}
+
 ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
     // Fork process
     pid_t pid = fork();
@@ -151,8 +184,9 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
             //  Open file and redirect stdin (TODO)
         }
         if (std::holds_alternative<FileTarget>(cmd.stdout_)) {
-            std::cout << "Redirecting stdout to file\n";
+
             const auto& file_target = std::get<FileTarget>(cmd.stdout_);
+            std::cout << "Redirecting stdout to file: " << file_target.path.c_str() << std::endl;
             // TODO umask
             //  Open file and redirect stdout
             int fd = open(file_target.path.c_str(),
@@ -253,10 +287,7 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
         }
         return ExecutionResult{.exit_code = exit_code, .error_message = std::nullopt};
     }
-    return ExecutionResult{.exit_code = platform::EXIT_FAILURE_STATUS,
-                           .error_message = "Fallthrough case reached, pid == 0"};
-    return ExecutionResult{.exit_code = platform::EXIT_FAILURE_STATUS,
-                           .error_message = "Fallthrough case reached, outside of pid checks"};
+    return ExecutionResult{.error_code = 0, .error_message = std::nullopt};
 }
 ExecutionResult PlatformExecutionPolicy::execute(const Pipeline& pipeline) const {
     // Phase 1: No pipeline support yet - just execute first command
