@@ -18,6 +18,7 @@ namespace wshell {
 
 /// Result of command execution
 struct ExecutionResult {
+    int error_code{0};
     int exit_code{0};
     std::optional<std::string> error_message;
     

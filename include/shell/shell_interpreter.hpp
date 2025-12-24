@@ -7,6 +7,7 @@
 #include <expected>
 #include <optional>
 
+#include <iostream>
 #include <map>
 #include <string>
 #include <utility>
@@ -178,22 +179,31 @@ private:
         cmd.args       = node.arguments;
 
         if (!node.redirections.empty()) {
+            std::cout << "Processing redirections for command: " << cmd.executable << "\n";
             for (const auto& redir : node.redirections) {
                 //cmd.redirections.push_back(redir);
                 if (redir.kind == RedirectKind::Input) {
+                    std::cout << "  Input redirection from: " << redir.target << "\n";
                     cmd.stdin_ = from_file(redir.target);
                 } else if (redir.kind == RedirectKind::OutputTruncate) {
+                    std::cout << "  Output redirection to: " << redir.target << "\n";
                     cmd.stdout_ = to_file(redir.target, OpenMode::WriteTruncate);
                 } else if (redir.kind == RedirectKind::OutputAppend) {
+                    std::cout << "  Output append redirection to: " << redir.target << "\n";
                     cmd.stdout_ = to_file(redir.target, OpenMode::WriteAppend);
                 }
             }
+        } else {
+            std::cout << "No redirections for command: " << cmd.executable << "\n";
         }
 
         auto result = executor_.execute(cmd);
 
         if (result.error_message) {
             return std::unexpected(*result.error_message);
+            std::cout << "Error executing command: " << *result.error_message << "\n";
+        } else {
+            std::cout << "Success executing command: " << cmd.executable << "\n";
         }
         return result.exit_code;
     }
