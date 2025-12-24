@@ -1,20 +1,27 @@
 // Copyright (c) 2024 William Sollers
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include <iostream>
-#include <span>
-#include <string>
-
 #include "shell/config.hpp"
 #include "shell/parser.hpp"
 #include "shell/shell_interpreter.hpp"
+#include "shell/shell_process_context.h"
+
+#include <span>
+
+#include <iostream>
+#include <string>
+
 #include "version.hpp"
 #include <shell/output_destination.hpp>
 
 int main(int argc, char* argv[]) {
     
     std::cout << "wshell version " << wshell::version() << "\n";
-    
+
+    ShellProcessContext ctx = ShellProcessContext();
+    ctx.argc = argc;
+    ctx.argv = argv;
+
     // Load configuration from ~/.wshellrc
     auto config_path = wshell::DefaultConfig::default_config_path();
     if (config_path.empty()) {

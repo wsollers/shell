@@ -20,14 +20,22 @@ public:
         : max_items_(max_items) {
         history_.reserve(max_items);
         //open and read from history
-        auto historyFile = std::ifstream(HISTORY_FILE);
-        if (historyFile) {
+        std::filesystem::path historyFile;
+        auto path = get_home_directory();
+        if ( path.has_value()) {
+            historyFile = std::filesystem::path(path.value()) / HISTORY_FILE;
+        } else {
+            historyFile = std::filesystem::path(HISTORY_FILE);
+        }
+
+        if (std::filesystem::exists(historyFile)) {
             std::string line;
-            while (std::getline(historyFile, line)) {
+            std::ifstream ifsHistory(historyFile);
+            while (std::getline(ifsHistory, line)) {
                 history_.push_back(line);
                 std::cout << line << std::endl;
             }
-            historyFile.close();
+            ifsHistory.close();
         } else {
             std::cerr << "Could not open history file." << std::endl;
         }
@@ -35,12 +43,20 @@ public:
 
     ~History() {
 
-        auto historyFile = std::ofstream(HISTORY_FILE);
-        if (historyFile) {
+        std::filesystem::path historyFile;
+        auto path = get_home_directory();
+        if ( path.has_value()) {
+            historyFile = std::filesystem::path(path.value()) / HISTORY_FILE;
+        } else {
+            historyFile = std::filesystem::path(HISTORY_FILE);
+        }
+
+        if (std::filesystem::exists(historyFile)) {
+            std::ofstream ofsHistory(historyFile);
             for (std::string line : history_) {
-                historyFile << line << std::endl;
+                ofsHistory << line << std::endl;
             }
-            historyFile.close();
+            ofsHistory.close();
         } else {
             std::cerr << "Could not open history file." << std::endl;
         }

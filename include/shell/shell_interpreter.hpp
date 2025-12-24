@@ -252,7 +252,9 @@ private:
         return history_.items();
     };
 
+    std::string expand_variables(std::string_view input) {
 
+    }
 
 };
 

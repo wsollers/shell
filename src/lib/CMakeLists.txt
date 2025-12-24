@@ -12,6 +12,7 @@ add_library(wshell_lib STATIC
     ${WSHELL_SOURCES_EXECUTOR}
         ../../include/shell/ast_printer.hpp
         ast/ast_printer.cpp
+        executor/shell_process_context.cpp
 )
 
 
