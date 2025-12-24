@@ -6,6 +6,8 @@
 #include <cstddef>
 #include <utility>
 #include <ranges>
+#include <fstream>
+#include <iostream>
 
 constexpr size_t HISTORY_DEFAULT_SIZE = 1000;
 namespace wshell {
@@ -13,10 +15,36 @@ namespace wshell {
 class History {
     using value_type = std::string;
 public:
+    //TODO: find portable way to lookup home directory
     explicit History(std::size_t max_items = HISTORY_DEFAULT_SIZE)
         : max_items_(max_items) {
         history_.reserve(max_items);
+        //open and read from history
+        auto historyFile = std::ifstream(HISTORY_FILE);
+        if (historyFile) {
+            std::string line;
+            while (std::getline(historyFile, line)) {
+                history_.push_back(line);
+                std::cout << line << std::endl;
+            }
+            historyFile.close();
+        } else {
+            std::cerr << "Could not open history file." << std::endl;
+        }
     };
+
+    ~History() {
+
+        auto historyFile = std::ofstream(HISTORY_FILE);
+        if (historyFile) {
+            for (std::string line : history_) {
+                historyFile << line << std::endl;
+            }
+            historyFile.close();
+        } else {
+            std::cerr << "Could not open history file." << std::endl;
+        }
+    }
 
     void set_max(std::size_t new_max) {
         if ( new_max == 0 ) {
@@ -59,6 +87,7 @@ private:
 
     std::vector<value_type> history_;
     std::size_t max_items_{HISTORY_DEFAULT_SIZE};
+    const char* HISTORY_FILE = "HISTORY";
 };
 
 }

@@ -94,6 +94,7 @@ int main(int argc, char* argv[]) {
                 }
 
                 auto next_line = stdin_source.read_line();
+
                 if (!next_line) {
                     (void)stderr_dest.write("Error reading input: " + next_line.error() + "\n");
                     break;
@@ -106,6 +107,8 @@ int main(int argc, char* argv[]) {
                 // Try parsing again
                 parse_result = wshell::parse_line(full_input);
             }
+
+            interpreter.addToHisttory(full_input);
 
             // If still an error (but not incomplete), print it
             if (!parse_result) {

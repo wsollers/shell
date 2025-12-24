@@ -11,6 +11,14 @@
 
 namespace wshell {
 
+std::optional<std::filesystem::path> get_home_directory() {
+    if (const char* home = getenv("USERPROFILE")) {
+        return home;
+    }
+    std::cerr << "Unable to find HOME directory\n";
+    return std::nullopt;
+}
+
 void printWindowsErrMsg(DWORD& error) {
     error = GetLastError();
     LPVOID lpMsgBuf;

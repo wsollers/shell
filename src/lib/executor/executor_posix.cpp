@@ -5,7 +5,10 @@
 
 #if defined(__linux__) || defined(__APPLE__)
 
+    #include "shell/execution_policy.hpp"
+
     #include <cstring>
+    #include <filesystem>
     #include <ios>
     #include <iostream>
     #include <memory>
@@ -13,18 +16,27 @@
     #include <string>
     #include <unordered_map>
     #include <vector>
-    #include <filesystem>
 
     #include <fcntl.h>
+    #include <pwd.h>
     #include <sys/wait.h>
     #include <unistd.h>
-
-
-    #include "shell/execution_policy.hpp"
 
 extern char** environ;
 
 namespace wshell {
+
+std::optional<std::filesystem::path> get_home_directory() {
+    if (const char* home = getenv("HOME")) {
+        return home;
+    }
+    if (auto* pw = getpwuid(getuid())) {
+        return pw->pw_dir;
+    }
+    std::cerr << "Unable to find HOME directory\n";
+    return std::nullopt;
+}
+
 
 namespace fs = std::filesystem;
 

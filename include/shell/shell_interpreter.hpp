@@ -92,6 +92,10 @@ public:
     [[nodiscard]] Executor<Policy>& executor() noexcept { return executor_; }
     [[nodiscard]] const Executor<Policy>& executor() const noexcept { return executor_; }
 
+    void addToHisttory(std::string command) {
+        history_.push(command);
+    };
+
 private:
     Executor<Policy> executor_;
     std::map<std::string, std::string> variables_;
@@ -235,6 +239,21 @@ private:
 
         return last;
     }
+
+    [[nodiscard]] std::optional<std::string> lookup_variable(const std::string& name) {
+        if (variables_.contains(name)) {
+            return variables_[name];
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    [[nodiscard]] std::vector<std::string> getHistory() {
+        return history_.items();
+    };
+
+
+
 };
 
 } // namespace wshell

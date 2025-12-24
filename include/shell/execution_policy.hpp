@@ -16,6 +16,8 @@ namespace wshell {
 // Execution Result
 // ============================================================================
 
+std::optional<std::filesystem::path> get_home_directory();
+
 /// Result of command execution
 struct ExecutionResult {
     int error_code{0};
