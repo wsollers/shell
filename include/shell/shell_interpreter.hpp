@@ -109,7 +109,8 @@ private:
         //Find occurences of ${} in line and replace with the
         //varable if possible. if not found replace with ""
 
-        std::string_
+        //TODO replace variables
+        return line;
     }
 
     /// Execute a single statement
