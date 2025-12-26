@@ -105,6 +105,13 @@ private:
     wshell::History history_;
 
 
+    [[nodiscard]] std::string replaceVariables(const std::string& line) {
+        //Find occurences of ${} in line and replace with the
+        //varable if possible. if not found replace with ""
+
+        std::string_
+    }
+
     /// Execute a single statement
     [[nodiscard]] std::expected<int, std::string>
     execute_statement(const StatementNode& statement) {
