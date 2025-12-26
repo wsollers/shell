@@ -5,7 +5,6 @@
 #include "shell/shell_process_context.h"
 static ShellProcessContext ctx;
 
-ShellProcessContext & shell_process_context() {
+ShellProcessContext& shell_process_context() {
     return ctx;
 }
-

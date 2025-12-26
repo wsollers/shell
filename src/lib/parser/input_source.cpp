@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 #include "shell/input_source.hpp"
+
 #include <fstream>
 #include <sstream>
 
@@ -11,8 +12,7 @@ namespace wshell {
 // FileInputSource Implementation
 //==============================================================================
 
-FileInputSource::FileInputSource(std::filesystem::path path)
-    : path_(std::move(path)) {}
+FileInputSource::FileInputSource(std::filesystem::path path) : path_(std::move(path)) {}
 
 std::expected<std::string, std::string> FileInputSource::read() {
     // Check file existence
@@ -39,7 +39,7 @@ std::expected<std::string, std::string> FileInputSource::read() {
 
     std::stringstream buffer;
     buffer << file.rdbuf();
-    
+
     if (file.fail() && !file.eof()) {
         return std::unexpected("Error reading file");
     }
@@ -60,32 +60,32 @@ StreamInputSource::StreamInputSource(std::istream& stream, std::string name)
 
 std::expected<std::string, std::string> StreamInputSource::read() {
     std::stringstream buffer;
-    
+
     // Read with size limit
     std::size_t total_read = 0;
     char chunk[4096];
-    
+
     while (stream_.read(chunk, sizeof(chunk)) || stream_.gcount() > 0) {
         auto count = stream_.gcount();
         total_read += count;
-        
+
         if (total_read > MAX_STREAM_SIZE) {
             return std::unexpected("Stream exceeds maximum size (1MB)");
         }
-        
+
         buffer.write(chunk, count);
     }
-    
+
     if (stream_.bad()) {
         return std::unexpected("Error reading from stream");
     }
-    
+
     return buffer.str();
 }
 
 std::expected<std::string, std::string> StreamInputSource::read_line() {
     std::string line;
-    
+
     if (!std::getline(stream_, line)) {
         if (stream_.eof()) {
             return std::unexpected("End of input");
@@ -95,13 +95,13 @@ std::expected<std::string, std::string> StreamInputSource::read_line() {
         }
         return std::unexpected("Failed to read line");
     }
-    
+
     // Security: Check line length
     static constexpr std::size_t MAX_LINE_SIZE = 10'240;  // 10KB per line
     if (line.size() > MAX_LINE_SIZE) {
         return std::unexpected("Line exceeds maximum size (10KB)");
     }
-    
+
     return line;
 }
 
@@ -124,4 +124,4 @@ std::string StringInputSource::source_name() const {
     return name_;
 }
 
-} // namespace shell
+}  // namespace wshell

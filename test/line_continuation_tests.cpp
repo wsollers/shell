@@ -1,8 +1,8 @@
-#include <gtest/gtest.h>
-
-#include "shell/parser.hpp"
 #include "shell/ast.hpp"
 #include "shell/ast_printer.hpp"
+#include "shell/parser.hpp"
+
+#include <gtest/gtest.h>
 
 using namespace wshell;
 

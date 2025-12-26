@@ -15,7 +15,6 @@
 #include <shell/output_destination.hpp>
 
 int main(int argc, char* argv[]) {
-    
     std::cout << "wshell version " << wshell::version() << "\n";
 
     ShellProcessContext ctx = ShellProcessContext();
@@ -29,10 +28,11 @@ int main(int argc, char* argv[]) {
     }
 
     wshell::Config config;
-    if ( std::filesystem::exists(config_path) ) {
+    if (std::filesystem::exists(config_path)) {
         std::cout << "Loading configuration from " << config_path.string() << "\n";
-        wshell::FileInputSource * file_source = new wshell::FileInputSource(config_path);
-        auto config_result = config.loadFromSource(std::unique_ptr<wshell::IInputSource>(file_source));
+        wshell::FileInputSource* file_source = new wshell::FileInputSource(config_path);
+        auto config_result =
+            config.loadFromSource(std::unique_ptr<wshell::IInputSource>(file_source));
         if (!config_result) {
             std::cerr << "Error loading config: " << config_result.error().message << "\n";
         }
@@ -42,13 +42,12 @@ int main(int argc, char* argv[]) {
     }
 
     std::span<char*> args(argv, static_cast<std::size_t>(argc));
-    //parse args and set flags
+    // parse args and set flags
     auto command_args = args.subspan(1);
 
     if (!command_args.empty()) {
-        //parse args and set flags
+        // parse args and set flags
     } else {
-
         wshell::StreamInputSource stdin_source(std::cin, "stdin");
         wshell::StreamOutputDestination stdout_dest(std::cout, "stdout");
         wshell::StreamOutputDestination stderr_dest(std::cerr, "stderr");
@@ -56,10 +55,10 @@ int main(int argc, char* argv[]) {
         auto prompt = config.get("PS1").value_or("wshell> ");
         auto cont_prompt = config.get("PS2").value_or("> ");
 
-        wshell::ShellInterpreter<wshell::PlatformExecutionPolicy> interpreter(stdout_dest, stderr_dest);
+        wshell::ShellInterpreter<wshell::PlatformExecutionPolicy> interpreter(stdout_dest,
+                                                                              stderr_dest);
 
         while (true) {
-
             std::string full_input;
 
             // --- First prompt (PS1) ---
@@ -92,8 +91,7 @@ int main(int argc, char* argv[]) {
 
             // --- Handle continuation ---
             while (!parse_result &&
-                   parse_result.error().kind_ == wshell::ParseErrorKind::IncompleteInput)
-            {
+                   parse_result.error().kind_ == wshell::ParseErrorKind::IncompleteInput) {
                 // Print continuation prompt (PS2)
                 if (auto rc = stdout_dest.write(cont_prompt); !rc) {
                     (void)stderr_dest.write("Error writing prompt: " + rc.error() + "\n");
@@ -127,7 +125,8 @@ int main(int argc, char* argv[]) {
             int exit_code = interpreter.execute_program(**parse_result);
 
             if (exit_code != 0) {
-                (void)stderr_dest.write("Command exited with code: " + std::to_string(exit_code) + "\n");
+                (void)stderr_dest.write("Command exited with code: " + std::to_string(exit_code) +
+                                        "\n");
             }
         }
     }

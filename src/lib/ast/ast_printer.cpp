@@ -1,4 +1,5 @@
 #include "shell/ast_printer.hpp"
+
 #include <sstream>
 
 namespace wshell {
@@ -17,9 +18,15 @@ void indent(std::ostream& os, int level) {
 void print_redirection(const Redirection& r, std::ostream& os, int indent_level) {
     indent(os, indent_level);
     switch (r.kind) {
-        case RedirectKind::Input:  os << "< ";  break;
-        case RedirectKind::OutputTruncate: os << "> ";  break;
-        case RedirectKind::OutputAppend: os << ">> "; break;
+        case RedirectKind::Input:
+            os << "< ";
+            break;
+        case RedirectKind::OutputTruncate:
+            os << "> ";
+            break;
+        case RedirectKind::OutputAppend:
+            os << ">> ";
+            break;
     }
     os << r.target << "\n";
 }
@@ -69,34 +76,36 @@ void print_sequence(const SequenceNode& seq, std::ostream& os, int indent_level)
 // -----------------------------------------------------------------------------
 
 void print_node(const StatementNode& stmt, std::ostream& os, int indent_level) {
-    std::visit([&](auto const& node) {
-        using T = std::decay_t<decltype(node)>;
+    std::visit(
+        [&](auto const& node) {
+            using T = std::decay_t<decltype(node)>;
 
-        if constexpr (std::is_same_v<T, CommentNode>) {
-            indent(os, indent_level);
-            os << "Comment: " << node.text << "\n";
+            if constexpr (std::is_same_v<T, CommentNode>) {
+                indent(os, indent_level);
+                os << "Comment: " << node.text << "\n";
 
-        } else if constexpr (std::is_same_v<T, AssignmentNode>) {
-            indent(os, indent_level);
-            os << "Assignment: " << node.variable << " = " << node.value << "\n";
+            } else if constexpr (std::is_same_v<T, AssignmentNode>) {
+                indent(os, indent_level);
+                os << "Assignment: " << node.variable << " = " << node.value << "\n";
 
-        } else if constexpr (std::is_same_v<T, CommandNode>) {
-            print_command(node, os, indent_level);
+            } else if constexpr (std::is_same_v<T, CommandNode>) {
+                print_command(node, os, indent_level);
 
-        } else if constexpr (std::is_same_v<T, PipelineNode>) {
-            print_pipeline(node, os, indent_level);
+            } else if constexpr (std::is_same_v<T, PipelineNode>) {
+                print_pipeline(node, os, indent_level);
 
-        } else if constexpr (std::is_same_v<T, SequenceNode>) {
-            print_sequence(node, os, indent_level);
+            } else if constexpr (std::is_same_v<T, SequenceNode>) {
+                print_sequence(node, os, indent_level);
 
-        } else {
-            indent(os, indent_level);
-            os << "<Unknown node>\n";
-        }
-    }, stmt);
+            } else {
+                indent(os, indent_level);
+                os << "<Unknown node>\n";
+            }
+        },
+        stmt);
 }
 
-} // namespace
+}  // namespace
 
 // -----------------------------------------------------------------------------
 // Public API
@@ -123,4 +132,4 @@ std::string to_string(const ProgramNode& program) {
     return oss.str();
 }
 
-} // namespace wshell
+}  // namespace wshell
