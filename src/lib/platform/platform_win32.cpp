@@ -3,7 +3,9 @@
 #include <windows.h>
 #include <string>
 #include <optional>
+
 #include <direct.h>
+#include <filesystem>
 
 namespace wshell {
 

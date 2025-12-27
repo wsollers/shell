@@ -6,6 +6,7 @@
 #include <pwd.h>
 #include <limits.h>
 #include <cstdlib>
+#include <filesystem>
 
 namespace wshell {
 
