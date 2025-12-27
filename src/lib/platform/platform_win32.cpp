@@ -27,6 +27,7 @@ bool terminate_process(int pid) {
     return result != 0;
 }
 
+
 std::optional<std::string> get_home_directory() {
     char* home = nullptr;
     size_t len = 0;
@@ -34,6 +35,14 @@ std::optional<std::string> get_home_directory() {
         std::string result(home);
         free(home);
         return result;
+    }
+    return std::nullopt;
+}
+
+std::optional<std::filesystem::path> get_home_directory_path() {
+    auto home = get_home_directory();
+    if (home) {
+        return std::filesystem::path(*home);
     }
     return std::nullopt;
 }

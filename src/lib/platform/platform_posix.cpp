@@ -25,11 +25,20 @@ bool terminate_process(int pid) {
     return kill(pid, SIGTERM) == 0;
 }
 
+
 std::optional<std::string> get_home_directory() {
     const char* home = getenv("HOME");
     if (home) return std::string(home);
     struct passwd* pw = getpwuid(getuid());
     if (pw && pw->pw_dir) return std::string(pw->pw_dir);
+    return std::nullopt;
+}
+
+std::optional<std::filesystem::path> get_home_directory_path() {
+    auto home = get_home_directory();
+    if (home) {
+        return std::filesystem::path(*home);
+    }
     return std::nullopt;
 }
 

@@ -14,7 +14,11 @@ std::optional<std::string> get_current_directory();
 // Terminate a process by ID
 bool terminate_process(int pid);
 
-// Get home directory
+
+// Get home directory as string (platform-specific)
 std::optional<std::string> get_home_directory();
+
+// Get home directory as filesystem::path (platform-agnostic)
+std::optional<std::filesystem::path> get_home_directory_path();
 
 } // namespace wshell

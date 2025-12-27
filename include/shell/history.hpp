@@ -27,7 +27,7 @@ public:
         history_.reserve(max_items);
         //open and read from history
         std::filesystem::path historyFile;
-        auto path = get_home_directory();
+        auto path = get_home_directory_path();
         if ( path.has_value()) {
             historyFile = std::filesystem::path(path.value()) / HISTORY_FILE;
         } else {
@@ -50,7 +50,7 @@ public:
     ~History() {
 
         std::filesystem::path historyFile;
-        auto path = get_home_directory();
+        auto path = get_home_directory_path();
         if ( path.has_value()) {
             historyFile = std::filesystem::path(path.value()) / HISTORY_FILE;
         } else {
