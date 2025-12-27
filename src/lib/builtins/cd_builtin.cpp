@@ -7,6 +7,8 @@
 namespace wshell {
 
 int CdBuiltin::invoke(const std::vector<std::string>& args, ShellProcessContext& ctx) {
+        (void)args;
+        (void)ctx;
     std::string dir;
     if (args.size() < 2) {
         auto home = wshell::get_home_directory();

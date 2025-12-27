@@ -6,6 +6,8 @@
 namespace wshell {
 
 int KillBuiltin::invoke(const std::vector<std::string>& args, ShellProcessContext& ctx) {
+        (void)args;
+        (void)ctx;
     if (args.size() < 2) {
         std::cerr << "kill: missing pid" << std::endl;
         return 1;

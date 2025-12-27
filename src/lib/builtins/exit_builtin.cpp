@@ -5,6 +5,8 @@
 namespace wshell {
 
 int ExitBuiltin::invoke(const std::vector<std::string>& args, ShellProcessContext& ctx) {
+        (void)args;
+        (void)ctx;
     int code = 0;
     if (args.size() > 1) {
         code = std::atoi(args[1].c_str());

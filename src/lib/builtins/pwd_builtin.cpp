@@ -5,6 +5,8 @@
 namespace wshell {
 
 int PwdBuiltin::invoke(const std::vector<std::string>& args, ShellProcessContext& ctx) {
+        (void)args;
+        (void)ctx;
     auto cwd = wshell::get_current_directory();
     if (cwd) {
         std::cout << *cwd << std::endl;
