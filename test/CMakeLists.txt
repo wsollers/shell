@@ -1,8 +1,11 @@
 if(ENABLE_TESTING)
     add_executable(wshell_tests
+        shell_substitution_tests.cpp
+        shell_history_tests.cpp
         test_command_parser.cpp
-            ../src/lib/ast/ast_printer.cpp
-            line_continuation_tests.cpp
+        ../src/lib/ast/ast_printer.cpp
+        line_continuation_tests.cpp
+
     )
 
     target_include_directories(wshell_tests

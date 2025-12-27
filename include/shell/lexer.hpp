@@ -16,7 +16,6 @@ namespace wshell {
 
 /// Token type enumeration
 enum class TokenType {
-
     Identifier,      // command names, variable names
     Let,             // 'let' keyword
     Equals,          // '='
@@ -24,6 +23,12 @@ enum class TokenType {
     Newline,         // '\n'
     Whitespace,      // ' ', '\t' (usually skipped)
     EndOfFile,       // End of input
+
+    // Variable and substitution tokens
+    Dollar,          // $
+    Variable,        // $VAR or ${VAR}
+    LBrace,          // {
+    RBrace,          // }
 
     //added
     Pipe,         // '|'

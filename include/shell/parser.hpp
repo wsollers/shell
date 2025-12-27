@@ -49,8 +49,8 @@ struct ParseError {
 class Parser {
 public:
     /// Construct parser with input source
-    explicit Parser(std::string_view source, bool repl_mode = true)
-        : lexer_(source), repl_mode_{repl_mode} {}
+    explicit Parser(std::string_view source, bool /*repl_mode*/ = true)
+        : lexer_(source) {}
 
     /// Parse the entire program
     [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError>
@@ -62,7 +62,6 @@ public:
 
 private:
     Lexer lexer_;
-    bool repl_mode_;
 
     // Parser methods (all updated to match the new AST)
     [[nodiscard]] std::expected<StatementNode, ParseError> parse_statement();

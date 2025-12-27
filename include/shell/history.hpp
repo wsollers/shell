@@ -9,6 +9,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "execution_policy.hpp"  // for get_home_directory
+
 constexpr size_t HISTORY_DEFAULT_SIZE = 1000;
 namespace wshell {
 
@@ -98,6 +100,8 @@ public:
         }
     }
 
+
+    
 private:
 
 

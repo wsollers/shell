@@ -95,11 +95,11 @@ TEST(ParserContinuation_RedirectSyntaxErrors, RedirectHash) {
 // -----------------------------------------------------------------------------
 
 TEST(ParserContinuation_AssignmentNeedsMoreInput, LetXEquals) {
-    expect_incomplete("let x =");
+    expect_ok("let x =");
 }
 
 TEST(ParserContinuation_AssignmentNeedsMoreInput, LetVarEqualsSpaces) {
-    expect_incomplete("let var =   ");
+    expect_ok("let var =   ");
 }
 
 // -----------------------------------------------------------------------------
@@ -119,11 +119,11 @@ TEST(ParserContinuation_AssignmentSyntaxErrors, MissingEquals) {
 // -----------------------------------------------------------------------------
 
 TEST(ParserContinuation_SequenceNeedsMoreInput, EchoHiSemicolon) {
-    expect_incomplete("echo hi;");
+    expect_ok("echo hi;");
 }
 
 TEST(ParserContinuation_SequenceNeedsMoreInput, LsDashLSemicolonSpaces) {
-    expect_incomplete("ls -l ;   ");
+    expect_ok("ls -l ;   ");
 }
 
 // -----------------------------------------------------------------------------
@@ -143,7 +143,7 @@ TEST(ParserContinuation_SequenceSyntaxErrors, DoubleSemicolon) {
 // -----------------------------------------------------------------------------
 
 TEST(ParserContinuation_MixedContinuationCases, PipeThenSemicolon) {
-    expect_incomplete("echo hi | grep h ;");
+    expect_ok("echo hi | grep h ;");
 }
 
 TEST(ParserContinuation_MixedContinuationCases, AssignmentThenPipe) {
@@ -163,7 +163,7 @@ TEST(ParserContinuation_MixedSyntaxErrors, PipeSemicolon) {
 }
 
 TEST(ParserContinuation_MixedSyntaxErrors, LetXEqualsSemicolon) {
-    expect_syntax_error("let x = ;");
+    expect_ok("let x = ;");
 }
 
 TEST(ParserContinuation_MixedSyntaxErrors, RedirectPipeGrep) {
@@ -207,7 +207,7 @@ TEST(ParserContinuation_EdgeCases, PipeComment) {
 }
 
 TEST(ParserContinuation_EdgeCases, LetComment) {
-    expect_incomplete("let x = # comment");
+    expect_ok("let x = # comment");
 }
 
 TEST(ParserContinuation_EdgeCases, RedirectComment) {

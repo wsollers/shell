@@ -157,7 +157,7 @@ std::vector<const char*> PlatformExecutionPolicy::convertArgv(const Command& cmd
     std::vector<const char*> argv;
     argv.push_back(cmd.executable.c_str());
     for (const auto& arg : cmd.args) {
-        argv.push_back(arg.c_str());
+        argv.push_back(arg.value.c_str());
     }
     argv.insert(argv.begin(), cmd.executable.filename().c_str());
     argv.push_back(nullptr);  // NULL-terminated
@@ -234,7 +234,7 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
         std::vector<const char*> argv;
         argv.push_back(cmd.executable.c_str());
         for (const auto& arg : cmd.args) {
-            argv.push_back(arg.c_str());
+            argv.push_back(arg.value.c_str());
         }
         argv.push_back(nullptr);  // NULL-terminated
 
