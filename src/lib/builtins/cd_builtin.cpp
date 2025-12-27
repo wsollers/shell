@@ -12,7 +12,7 @@ int CdBuiltin::invoke(const std::vector<std::string>& args, ShellProcessContext&
     std::string dir;
     if (args.size() < 2) {
         auto home = wshell::get_home_directory_path();
-        dir = home.value_or(".");
+        dir = home ? home->string() : ".";
     } else {
         dir = args[1];
     }
