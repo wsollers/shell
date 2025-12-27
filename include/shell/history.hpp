@@ -1,13 +1,17 @@
 #pragma once
 
+
 #include <vector>
 #include <string>
+#include <filesystem>
+#include <ios>
 #include <algorithm>
 #include <cstddef>
 #include <utility>
 #include <ranges>
 #include <fstream>
 #include <iostream>
+#include <locale>
 
 #include "execution_policy.hpp"  // for get_home_directory
 
@@ -17,7 +21,7 @@ namespace wshell {
 class History {
     using value_type = std::string;
 public:
-    //TODO: find portable way to lookup home directory
+
     explicit History(std::size_t max_items = HISTORY_DEFAULT_SIZE)
         : max_items_(max_items) {
         history_.reserve(max_items);

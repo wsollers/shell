@@ -277,6 +277,11 @@ shell/
 - For performance regression testing
 ```
 
+#### 6. Acceptance test
+All text from unit test that is used to test shell parsing must be validated in the appropriate shell
+
+
+
 ### Utility Scripts
 
 All scripts in `scripts/` directory **MUST** have both:

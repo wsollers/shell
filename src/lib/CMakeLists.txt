@@ -7,9 +7,15 @@ file(GLOB_RECURSE WSHELL_SOURCES_EXECUTOR
         ${CMAKE_CURRENT_SOURCE_DIR}/executor/*.cpp
 )
 
+file(GLOB_RECURSE WSHELL_SOURCES_BUILTINS
+        ${CMAKE_CURRENT_SOURCE_DIR}/builtins/*.cpp
+)
+
+
 add_library(wshell_lib STATIC
     ${WSHELL_SOURCES_PARSER}
     ${WSHELL_SOURCES_EXECUTOR}
+    ${WSHELL_SOURCES_BUILTINS}
         ../../include/shell/ast_printer.hpp
         ast/ast_printer.cpp
         executor/shell_process_context.cpp

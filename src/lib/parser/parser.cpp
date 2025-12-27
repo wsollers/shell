@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 #include "shell/parser.hpp"
+#include <source_location>
 
 #include "shell/ast.hpp"
 #include "shell/ast_printer.hpp"
@@ -142,7 +143,7 @@ std::expected<Redirection, ParseError> Parser::parse_redirection() {
     // Detect incomplete input: "cmd >" or "cmd <"
     if (check(TokenType::EndOfFile) || check(TokenType::Newline)) {
         return std::unexpected(ParseError{ParseErrorKind::SyntaxError,
-                                          "Expected redirection target", op.line, op.column});
+                          "Expected redirection target", op.line, op.column, std::source_location::current()});
     }
 
     Token target = current_token();
@@ -266,7 +267,6 @@ std::expected<StatementNode, ParseError> Parser::parse_pipeline() {
 
     while (check(TokenType::Pipe)) {
         Token pipe_tok = peek_token();
-        // Save lexer state
         auto lexer_state = lexer_;
         (void)match(TokenType::Pipe);  // consume '|'
 
@@ -279,32 +279,29 @@ std::expected<StatementNode, ParseError> Parser::parse_pipeline() {
         if (check(TokenType::Pipe)) {
             return std::unexpected(ParseError{ParseErrorKind::SyntaxError,
                                               "Unexpected '|' after '|'", peek_token().line,
-                                              peek_token().column});
+                                              peek_token().column, std::source_location::current()});
         }
-        // Pipe followed by semicolon: SyntaxError
+        // Pipe followed by semicolon: SyntaxError (matches Bash)
         if (check(TokenType::Semicolon)) {
             return std::unexpected(ParseError{ParseErrorKind::SyntaxError,
-                                              "Unexpected ';' after '|'", peek_token().line,
-                                              peek_token().column});
+                                              "Syntax error near unexpected token ';' after '|'",
+                                              peek_token().line, peek_token().column, std::source_location::current()});
         }
-        // Detect incomplete input: "cmd |", "cmd | # comment"
+        // Trailing pipe: Syntax error (matches Bash)
         if (check(TokenType::EndOfFile) || check(TokenType::Newline)) {
-            return std::unexpected(ParseError{ParseErrorKind::IncompleteInput,
-                                              "Expected command after '|'", pipe_tok.line,
-                                              pipe_tok.column});
+            return std::unexpected(ParseError{ParseErrorKind::SyntaxError,
+                                              "Syntax error: unexpected end of input after '|'",
+                                              pipe_tok.line, pipe_tok.column, std::source_location::current()});
         }
 
         auto next = parse_command();
         if (!next) {
-            // If the error is IncompleteInput, propagate it upward (dangling pipe)
             if (next.error().kind_ == ParseErrorKind::IncompleteInput) {
                 return std::unexpected(next.error());
             }
-            // Restore lexer state so parse_list can see the pipe
             lexer_ = lexer_state;
             break;
         }
-
         cmds.push_back(std::move(*next));
     }
 
@@ -336,35 +333,33 @@ std::expected<StatementNode, ParseError> Parser::parse_list() {
     stmts.push_back(std::move(*first_pipe));
 
     while (match(TokenType::Semicolon)) {
-        // Accept trailing semicolon at end of input (REPL or script)
+        // Bash: Trailing semicolons are allowed (no syntax error)
         if (check(TokenType::EndOfFile) || check(TokenType::Newline)) {
             break;
         }
 
-        // If the next token is a pipe or redirect, treat as incomplete input (continuation)
-        if (check(TokenType::Pipe) || check(TokenType::Redirect)) {
+        // If the next token is a pipe, treat as syntax error (matches Bash)
+        if (check(TokenType::Pipe)) {
             Token op_tok = peek_token();
-            return std::unexpected(ParseError{ParseErrorKind::IncompleteInput,
-                                              "Incomplete command at end of line",
-                                              op_tok.line, op_tok.column});
+            return std::unexpected(ParseError{ParseErrorKind::SyntaxError,
+                                              "Syntax error: unexpected '" + op_tok.value + "' after ';'",
+                                              op_tok.line, op_tok.column, std::source_location::current()});
         }
 
         auto next_pipe = parse_pipeline();
         if (!next_pipe.has_value()) {
-            // Always propagate IncompleteInput upward for continuation
             if (next_pipe.error().kind_ == ParseErrorKind::IncompleteInput) {
                 return std::unexpected(next_pipe.error());
             }
-            // Otherwise propagate any error
             return std::unexpected(next_pipe.error());
         }
 
-        // After parsing a pipeline inside a list, check for dangling operators (pipe/redirect)
-        if (check(TokenType::Pipe) || check(TokenType::Redirect)) {
+        // After parsing a pipeline inside a list, check for dangling operators (pipe only)
+        if (check(TokenType::Pipe)) {
             Token op_tok = peek_token();
-            return std::unexpected(ParseError{ParseErrorKind::IncompleteInput,
-                                              "Incomplete command at end of line",
-                                              op_tok.line, op_tok.column});
+            return std::unexpected(ParseError{ParseErrorKind::SyntaxError,
+                                              "Syntax error: unexpected '" + op_tok.value + "' after statement",
+                                              op_tok.line, op_tok.column, std::source_location::current()});
         }
 
         stmts.push_back(std::move(*next_pipe));
@@ -394,13 +389,37 @@ std::expected<StatementNode, ParseError> Parser::parse_statement() {
         return StatementNode{std::move(*c)};
     }
 
-    // Assignment
+    // Assignment (let x = ...)
     if (check(TokenType::Let)) {
         auto a = parse_assignment();
         if (!a) {
             return std::unexpected(a.error());
         }
-        return StatementNode{std::move(*a)};
+        // If next token is semicolon or command, parse as sequence (let assignment; ...)
+        if (check(TokenType::Semicolon)) {
+            // Parse the rest of the sequence
+            std::vector<StatementNode> stmts;
+            stmts.push_back(StatementNode{std::move(*a)});
+            while (match(TokenType::Semicolon)) {
+                // Allow trailing semicolon (Bash: ok)
+                if (check(TokenType::EndOfFile) || check(TokenType::Newline)) {
+                    break;
+                }
+                auto next = parse_list();
+                if (!next) {
+                    return std::unexpected(next.error());
+                }
+                stmts.push_back(std::move(*next));
+            }
+            if (stmts.size() == 1) {
+                return stmts.front();
+            }
+            SequenceNode seq = make_sequence(std::move(stmts));
+            return StatementNode{std::move(seq)};
+        } else {
+            // Single assignment only
+            return StatementNode{std::move(*a)};
+        }
     }
 
     // Command / Pipeline / Sequence
@@ -458,45 +477,23 @@ std::expected<std::unique_ptr<ProgramNode>, ParseError> Parser::parse_line() {
     program->add_statement(std::move(*stmt));
 
 
-    // Allow a single trailing newline or semicolon
+    // Allow a single trailing newline
     if (check(TokenType::Newline)) {
         (void)lexer_.next_token();
     }
+
+    // Allow a single trailing semicolon (with or without whitespace)
     if (check(TokenType::Semicolon)) {
         (void)lexer_.next_token();
+        // Allow trailing whitespace (newlines) after semicolon
+        while (check(TokenType::Newline)) {
+            (void)lexer_.next_token();
+        }
     }
 
-    // If leftover tokens exist, check if they indicate continuation
+    // If leftover tokens exist, treat as syntax error
     if (!check(TokenType::EndOfFile)) {
         Token last = peek_token();
-
-        // Dangling operator at end of line → continuation
-        if (last.type == TokenType::Pipe || last.type == TokenType::Redirect) {
-            return std::unexpected(ParseError{ParseErrorKind::IncompleteInput,
-                                              "Incomplete command at end of line", last.line,
-                                              last.column});
-        }
-        // If a semicolon is present, allow a single trailing semicolon, but check for pipe after
-        if (last.type == TokenType::Semicolon) {
-            (void)lexer_.next_token();
-            if (!check(TokenType::EndOfFile)) {
-                Token next = peek_token();
-                if (next.type == TokenType::Pipe || next.type == TokenType::Redirect) {
-                    // Always treat as IncompleteInput
-                    return std::unexpected(ParseError{ParseErrorKind::IncompleteInput,
-                                                      "Incomplete command at end of line", next.line,
-                                                      next.column});
-                }
-                // Any other leftover tokens are a syntax error
-                return std::unexpected(ParseError{ParseErrorKind::SyntaxError,
-                                                  "Unexpected tokens after statement", next.line,
-                                                  next.column});
-            }
-            // If only a trailing semicolon, accept
-            return program;
-        }
-
-        // Otherwise it's a real syntax error
         return std::unexpected(ParseError{ParseErrorKind::SyntaxError,
                                           "Unexpected tokens after statement", last.line,
                                           last.column});

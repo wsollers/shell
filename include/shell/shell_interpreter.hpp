@@ -39,12 +39,14 @@ template<ExecutionPolicy Policy = PlatformExecutionPolicy>
 class ShellInterpreter {
 public:
     /// Construct with output destination for messages
-    explicit ShellInterpreter(wshell::IOutputDestination& output,
-                              wshell::IOutputDestination& error_output)
-        : executor_{},
-          variables_{},
-          output_(output),
-          error_output_(error_output), builtins_{}, history_{} {}
+        explicit ShellInterpreter(wshell::IOutputDestination& output,
+                                                            wshell::IOutputDestination& error_output)
+                : executor_{},
+                    variables_{},
+                    output_(output),
+                    error_output_(error_output),
+                    history_{},
+                    builtins_{&history_} {}
 
     /// Execute a parsed program (AST)
     [[nodiscard]] int execute_program(const ProgramNode& program) {
@@ -140,17 +142,11 @@ private:
     std::map<std::string, std::string> variables_;
     wshell::IOutputDestination& output_;
     wshell::IOutputDestination& error_output_;
-    wshell::BuiltIns builtins_;
     wshell::History history_;
+    wshell::BuiltIns builtins_;
+    ShellProcessContext process_context_;
 
 
-    [[nodiscard]] std::string replaceVariables(const std::string& line) {
-        //Find occurences of ${} in line and replace with the
-        //varable if possible. if not found replace with ""
-
-        //TODO replace variables
-        return line;
-    }
 
     /// Execute a single statement
     [[nodiscard]] std::expected<int, std::string>
@@ -197,16 +193,39 @@ private:
     /// Execute a command
     [[nodiscard]] std::expected<int, std::string>
     execute_command(const CommandNode& node) {
+        std::string cmd_name = expand_variables(node.command_name.text);
+        std::vector<std::string> args;
+        args.push_back(cmd_name);
+        for (const auto& arg : node.arguments) {
+            std::string expanded_arg;
+            if (arg.quoted) {
+                expanded_arg = expand_variables(arg.text);
+            } else {
+                expanded_arg = expand_variables(arg.text);
+            }
+            args.push_back(expanded_arg);
+        }
+
+        // Check for built-in
+        if (builtins_.is_builtin_command(cmd_name)) {
+            auto* fn = builtins_.get_builtin_function(cmd_name);
+            if (fn) {
+                int code = fn->invoke(args, process_context_);
+                return code;
+            } else {
+                return std::unexpected("Builtin not implemented: " + cmd_name);
+            }
+        }
+
+        // External command execution (as before)
         Command cmd;
-        cmd.executable = expand_variables(node.command_name.text);
+        cmd.executable = cmd_name;
         cmd.args.reserve(node.arguments.size());
         for (const auto& arg : node.arguments) {
             std::string expanded_arg;
             if (arg.quoted) {
-                // Only expand variables, do not split words
                 expanded_arg = expand_variables(arg.text);
             } else {
-                // Expand variables and allow word splitting (future)
                 expanded_arg = expand_variables(arg.text);
             }
             cmd.args.emplace_back(expanded_arg, arg.quoted, arg.needs_expansion);
