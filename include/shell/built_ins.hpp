@@ -69,7 +69,7 @@ static const std::unordered_map<std::string, std::string> builtinVariablesDefaul
 class BuiltIns {
   public:
     BuiltIns(History* history_ptr = nullptr) {
-      [[maybeunused]]history_ptr; // Suppress unused parameter warning (MSVC)
+        (void)history_ptr; // Suppress unused parameter warning (MSVC)
         // Initialize built-in variable map with defaults
         builtinVariables_ = builtinVariablesDefault;
         // Register builtin function implementations
