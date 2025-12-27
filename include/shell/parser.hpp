@@ -8,6 +8,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <source_location>
 
 #include "ast.hpp"
 #include "ast_printer.hpp"
@@ -26,17 +27,20 @@ struct ParseError {
     std::string message_;
     std::size_t line_{0};
     std::size_t column_{0};
+    std::source_location location_ = std::source_location::current();
 
     ParseError(ParseErrorKind theKind = ParseErrorKind::SyntaxError,
                std::string msg = "Unknown Error.",
                std::size_t ln = 0,
-               std::size_t col = 0)
-        : kind_{theKind}, message_(std::move(msg)), line_(ln), column_(col) {}
+               std::size_t col = 0,
+               std::source_location loc = std::source_location::current())
+        : kind_{theKind}, message_(std::move(msg)), line_(ln), column_(col), location_(loc) {}
 
     [[nodiscard]] std::string to_string() const {
         return "Parse error at line " + std::to_string(line_)
              + ", column " + std::to_string(column_)
-             + ": " + message_;
+             + ": " + message_ +
+             " [at " + location_.file_name() + ":" + std::to_string(location_.line()) + "]";
     }
 };
 
@@ -49,8 +53,8 @@ struct ParseError {
 class Parser {
 public:
     /// Construct parser with input source
-    explicit Parser(std::string_view source, bool repl_mode = true)
-        : lexer_(source), repl_mode_{repl_mode} {}
+    explicit Parser(std::string_view source, bool /*repl_mode*/ = true)
+        : lexer_(source) {}
 
     /// Parse the entire program
     [[nodiscard]] std::expected<std::unique_ptr<ProgramNode>, ParseError>
@@ -62,7 +66,6 @@ public:
 
 private:
     Lexer lexer_;
-    bool repl_mode_;
 
     // Parser methods (all updated to match the new AST)
     [[nodiscard]] std::expected<StatementNode, ParseError> parse_statement();

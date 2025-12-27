@@ -39,12 +39,14 @@ template<ExecutionPolicy Policy = PlatformExecutionPolicy>
 class ShellInterpreter {
 public:
     /// Construct with output destination for messages
-    explicit ShellInterpreter(wshell::IOutputDestination& output,
-                              wshell::IOutputDestination& error_output)
-        : executor_{},
-          variables_{},
-          output_(output),
-          error_output_(error_output), builtins_{}, history_{} {}
+        explicit ShellInterpreter(wshell::IOutputDestination& output,
+                                                            wshell::IOutputDestination& error_output)
+                : executor_{},
+                    variables_{},
+                    output_(output),
+                    error_output_(error_output),
+                    history_{},
+                    builtins_{&history_} {}
 
     /// Execute a parsed program (AST)
     [[nodiscard]] int execute_program(const ProgramNode& program) {
@@ -96,22 +98,55 @@ public:
         history_.push(command);
     };
 
+    
+    std::string expand_variables(std::string_view input) {
+        std::string result;
+        const std::string str(input);
+        size_t i = 0;
+        while (i < str.size()) {
+            if (str[i] == '$') {
+                size_t var_start = i + 1;
+                size_t var_end = var_start;
+                std::string var_name;
+                if (var_start < str.size() && str[var_start] == '{') {
+                    // ${VAR} syntax
+                    var_start++;
+                    var_end = var_start;
+                    while (var_end < str.size() && str[var_end] != '}') ++var_end;
+                    var_name = str.substr(var_start, var_end - var_start);
+                    i = (var_end < str.size()) ? var_end + 1 : str.size();
+                } else {
+                    // $VAR syntax
+                    while (var_end < str.size() && (std::isalnum(str[var_end]) || str[var_end] == '_')) ++var_end;
+                    var_name = str.substr(var_start, var_end - var_start);
+                    i = var_end;
+                }
+                if (!var_name.empty()) {
+                    auto it = variables_.find(var_name);
+                    if (it != variables_.end()) {
+                        result += it->second;
+                    }
+                } else {
+                    result += '$';
+                }
+            } else {
+                result += str[i];
+                ++i;
+            }
+        }
+        return result;
+    }
+
 private:
     Executor<Policy> executor_;
     std::map<std::string, std::string> variables_;
     wshell::IOutputDestination& output_;
     wshell::IOutputDestination& error_output_;
-    wshell::BuiltIns builtins_;
     wshell::History history_;
+    wshell::BuiltIns builtins_;
+    ShellProcessContext process_context_;
 
 
-    [[nodiscard]] std::string replaceVariables(const std::string& line) {
-        //Find occurences of ${} in line and replace with the
-        //varable if possible. if not found replace with ""
-
-        //TODO replace variables
-        return line;
-    }
 
     /// Execute a single statement
     [[nodiscard]] std::expected<int, std::string>
@@ -155,54 +190,59 @@ private:
         return platform::EXIT_SUCCESS_STATUS;
     }
 
-    /*
-    struct Command {
-    std::filesystem::path executable;                 // absolute or relative; resolution is exec-layer policy
-    std::optional<std::filesystem::path> work_dir;    // nullopt = inherit current working directory
-
-    // argv[0] policy: keep argv[0] separate (recommended).
-    // exec-layer can build argv = {executable.filename().string(), args...} or use provided "argv0".
-    std::optional<std::string> argv0;
-    Strings args;
-
-    // env policy: if env_inherit is true, overlay "env" onto current environment.
-    // if false, use exactly env.
-    bool env_inherit{true};
-    EnvMap env;
-
-    // stdio endpoints
-    IO stdin_  { InheritTarget{} };
-    IO stdout_ { InheritTarget{} };
-    IO stderr_ { InheritTarget{} };
-};
-
-    struct CommandNode {
-    std::string command_name;
-    std::vector<std::string> arguments;
-    std::vector<Redirection> redirections;
-    bool background = false;
-};
-    */
     /// Execute a command
     [[nodiscard]] std::expected<int, std::string>
     execute_command(const CommandNode& node) {
+        std::string cmd_name = expand_variables(node.command_name.text);
+        std::vector<std::string> args;
+        args.push_back(cmd_name);
+        for (const auto& arg : node.arguments) {
+            std::string expanded_arg;
+            if (arg.quoted) {
+                expanded_arg = expand_variables(arg.text);
+            } else {
+                expanded_arg = expand_variables(arg.text);
+            }
+            args.push_back(expanded_arg);
+        }
+
+        // Check for built-in
+        if (builtins_.is_builtin_command(cmd_name)) {
+            auto* fn = builtins_.get_builtin_function(cmd_name);
+            if (fn) {
+                int code = fn->invoke(args, process_context_);
+                return code;
+            } else {
+                return std::unexpected("Builtin not implemented: " + cmd_name);
+            }
+        }
+
+        // External command execution (as before)
         Command cmd;
-        cmd.executable = node.command_name;
-        cmd.args       = node.arguments;
+        cmd.executable = cmd_name;
+        cmd.args.reserve(node.arguments.size());
+        for (const auto& arg : node.arguments) {
+            std::string expanded_arg;
+            if (arg.quoted) {
+                expanded_arg = expand_variables(arg.text);
+            } else {
+                expanded_arg = expand_variables(arg.text);
+            }
+            cmd.args.emplace_back(expanded_arg, arg.quoted, arg.needs_expansion);
+        }
 
         if (!node.redirections.empty()) {
             std::cout << "Processing redirections for command: " << cmd.executable << "\n";
             for (const auto& redir : node.redirections) {
-                //cmd.redirections.push_back(redir);
                 if (redir.kind == RedirectKind::Input) {
                     std::cout << "  Input redirection from: " << redir.target << "\n";
-                    cmd.stdin_ = from_file(redir.target);
+                    cmd.stdin_ = from_file(expand_variables(redir.target.text));
                 } else if (redir.kind == RedirectKind::OutputTruncate) {
                     std::cout << "  Output redirection to: " << redir.target << "\n";
-                    cmd.stdout_ = to_file(redir.target, OpenMode::WriteTruncate);
+                    cmd.stdout_ = to_file(expand_variables(redir.target.text), OpenMode::WriteTruncate);
                 } else if (redir.kind == RedirectKind::OutputAppend) {
                     std::cout << "  Output append redirection to: " << redir.target << "\n";
-                    cmd.stdout_ = to_file(redir.target, OpenMode::WriteAppend);
+                    cmd.stdout_ = to_file(expand_variables(redir.target.text), OpenMode::WriteAppend);
                 }
             }
         } else {
@@ -260,9 +300,6 @@ private:
         return history_.items();
     };
 
-    std::string expand_variables(std::string_view input) {
-
-    }
 
 };
 

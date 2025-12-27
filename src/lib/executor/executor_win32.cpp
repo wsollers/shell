@@ -5,19 +5,17 @@
 
 #if defined(_WIN32)
 
-#include "shell/execution_policy.hpp"
-#include <windows.h>
-#include <sstream>
+
+    #define _CRT_SECURE_NO_WARNINGS
+    #include "shell/execution_policy.hpp"
+
+    #include <sstream>
+    #include <windows.h>
+    #include <iostream>
 
 namespace wshell {
 
-std::optional<std::filesystem::path> get_home_directory() {
-    if (const char* home = getenv("USERPROFILE")) {
-        return home;
-    }
-    std::cerr << "Unable to find HOME directory\n";
-    return std::nullopt;
-}
+
 
 void printWindowsErrMsg(DWORD& error) {
     error = GetLastError();
@@ -38,10 +36,10 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
     std::ostringstream cmdline;
     cmdline << cmd.executable.string();
     for (const auto& arg : cmd.args) {
-        cmdline << " " << arg;
+        cmdline << " " << arg.value;
     }
     std::string cmdline_str = cmdline.str();
-    
+
     // Setup process startup info
     STARTUPINFOA si{};
     si.cb = sizeof(si);
@@ -49,64 +47,57 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
     si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
     si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-    
+
     PROCESS_INFORMATION pi{};
-    
+
     // Create process
     // Note: CreateProcessA modifies the command line, so we need a mutable copy
     std::vector<char> cmdline_buf(cmdline_str.begin(), cmdline_str.end());
     cmdline_buf.push_back('\0');
-    
-    BOOL success = CreateProcessA(
-        nullptr,                    // Application name (use command line)
-        cmdline_buf.data(),         // Command line
-        nullptr,                    // Process security attributes
-        nullptr,                    // Thread security attributes
-        TRUE,                       // Inherit handles
-        0,                          // Creation flags
-        nullptr,                    // Environment
-        nullptr,                    // Current directory
-        &si,                        // Startup info
-        &pi                         // Process information
+
+    BOOL success = CreateProcessA(nullptr,             // Application name (use command line)
+                                  cmdline_buf.data(),  // Command line
+                                  nullptr,             // Process security attributes
+                                  nullptr,             // Thread security attributes
+                                  TRUE,                // Inherit handles
+                                  0,                   // Creation flags
+                                  nullptr,             // Environment
+                                  nullptr,             // Current directory
+                                  &si,                 // Startup info
+                                  &pi                  // Process information
     );
-    
+
     if (!success) {
         DWORD error;
 
         printWindowsErrMsg(error);
 
-        return ExecutionResult{
-            .exit_code = platform::EXIT_FAILURE_STATUS,
-            .error_message = "Failed to create process (error " + std::to_string(error) + ")"
-        };
+        return ExecutionResult{.exit_code = platform::EXIT_FAILURE_STATUS,
+                               .error_message = "Failed to create process (error " +
+                                                std::to_string(error) + ")"};
     }
-    
+
     // Wait for process to complete
     WaitForSingleObject(pi.hProcess, INFINITE);
-    
+
     // Get exit code
     DWORD exit_code = platform::EXIT_FAILURE_STATUS;
     GetExitCodeProcess(pi.hProcess, &exit_code);
-    
+
     // Clean up handles
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-    
-    return ExecutionResult{
-        .exit_code = static_cast<int>(exit_code),
-        .error_message = std::nullopt
-    };
+
+    return ExecutionResult{.exit_code = static_cast<int>(exit_code), .error_message = std::nullopt};
 }
 
 ExecutionResult PlatformExecutionPolicy::execute(const Pipeline& pipeline) const {
     // Phase 1: No pipeline support yet - just execute first command
     if (pipeline.empty()) {
-        return ExecutionResult{
-            .exit_code = platform::EXIT_FAILURE_STATUS,
-            .error_message = "Empty pipeline"
-        };
+        return ExecutionResult{.exit_code = platform::EXIT_FAILURE_STATUS,
+                               .error_message = "Empty pipeline"};
     }
-    
+
     // For now, just execute the first command
     // Phase 2 will add proper pipeline support
     return execute(pipeline.commands[0]);
@@ -117,6 +108,6 @@ void PlatformExecutionPolicy::init_job_control() const {
     // Would use Job Objects here if needed
 }
 
-} // namespace wshell
+}  // namespace wshell
 
-#endif // _WIN32
+#endif  // _WIN32

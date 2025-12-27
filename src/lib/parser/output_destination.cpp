@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 #include "shell/output_destination.hpp"
+
 #include <fstream>
 
 namespace wshell {
@@ -15,21 +16,21 @@ StreamOutputDestination::StreamOutputDestination(std::ostream& stream, std::stri
 
 std::expected<void, std::string> StreamOutputDestination::write(std::string_view content) {
     stream_ << content;
-    
+
     if (stream_.fail()) {
         return std::unexpected("Failed to write to stream");
     }
-    
+
     return {};
 }
 
 std::expected<void, std::string> StreamOutputDestination::flush() {
     stream_.flush();
-    
+
     if (stream_.fail()) {
         return std::unexpected("Failed to flush stream");
     }
-    
+
     return {};
 }
 
@@ -41,8 +42,7 @@ std::string StreamOutputDestination::destination_name() const {
 // StringOutputDestination Implementation
 //==============================================================================
 
-StringOutputDestination::StringOutputDestination(std::string name)
-    : name_(std::move(name)) {}
+StringOutputDestination::StringOutputDestination(std::string name) : name_(std::move(name)) {}
 
 std::expected<void, std::string> StringOutputDestination::write(std::string_view content) {
     try {
@@ -68,11 +68,9 @@ std::string StringOutputDestination::destination_name() const {
 
 FileOutputDestination::FileOutputDestination(std::filesystem::path path, Mode mode)
     : path_(std::move(path)) {
-    
-    auto open_mode = (mode == Mode::Append) 
-        ? (std::ios::out | std::ios::app) 
-        : (std::ios::out | std::ios::trunc);
-    
+    auto open_mode = (mode == Mode::Append) ? (std::ios::out | std::ios::app)
+                                            : (std::ios::out | std::ios::trunc);
+
     stream_ = std::make_unique<std::ofstream>(path_, open_mode);
 }
 
@@ -86,13 +84,13 @@ std::expected<void, std::string> FileOutputDestination::write(std::string_view c
     if (!stream_) {
         return std::unexpected("File not open: " + path_.string());
     }
-    
+
     *stream_ << content;
-    
+
     if (stream_->fail()) {
         return std::unexpected("Failed to write to file: " + path_.string());
     }
-    
+
     return {};
 }
 
@@ -100,13 +98,13 @@ std::expected<void, std::string> FileOutputDestination::flush() {
     if (!stream_) {
         return std::unexpected("File not open: " + path_.string());
     }
-    
+
     stream_->flush();
-    
+
     if (stream_->fail()) {
         return std::unexpected("Failed to flush file: " + path_.string());
     }
-    
+
     return {};
 }
 
@@ -114,4 +112,4 @@ std::string FileOutputDestination::destination_name() const {
     return path_.string();
 }
 
-} // namespace shell
+}  // namespace wshell

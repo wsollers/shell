@@ -2,22 +2,26 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 #include "shell/lexer.hpp"
+
 #include <cctype>
 
 namespace wshell {
 
 char Lexer::current() const noexcept {
-    if (is_at_end()) return '\0';
+    if (is_at_end())
+        return '\0';
     return source_[position_];
 }
 
 char Lexer::peek(std::size_t offset) const noexcept {
-    if (position_ + offset >= source_.size()) return '\0';
+    if (position_ + offset >= source_.size())
+        return '\0';
     return source_[position_ + offset];
 }
 
 void Lexer::advance() noexcept {
-    if (is_at_end()) return;
+    if (is_at_end())
+        return;
 
     if (current() == '\n') {
         line_++;
@@ -40,7 +44,7 @@ Token Lexer::make_token(TokenType type, std::string value) {
 
 Token Lexer::lex_comment() {
     std::size_t start = position_;
-    advance(); // Skip '#'
+    advance();  // Skip '#'
 
     while (!is_at_end() && current() != '\n') {
         advance();
@@ -64,12 +68,11 @@ Token Lexer::lex_word() {
     std::size_t start = position_;
 
     auto is_operator = [&](char ch) {
-        return ch == '=' || ch == '#' || ch == '|' || ch == '&' ||
-               ch == ';' || ch == '<' || ch == '>';
+        return ch == '=' || ch == '#' || ch == '|' || ch == '&' || ch == ';' || ch == '<' ||
+               ch == '>';
     };
 
-    while (!is_at_end() &&
-           !std::isspace(static_cast<unsigned char>(current())) &&
+    while (!is_at_end() && !std::isspace(static_cast<unsigned char>(current())) &&
            !is_operator(current())) {
         advance();
     }
@@ -180,4 +183,4 @@ std::vector<Token> Lexer::tokenize(std::string_view source) {
     return tokens;
 }
 
-} // namespace wshell
+}  // namespace wshell

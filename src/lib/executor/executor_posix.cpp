@@ -26,17 +26,6 @@ extern char** environ;
 
 namespace wshell {
 
-std::optional<std::filesystem::path> get_home_directory() {
-    if (const char* home = getenv("HOME")) {
-        return home;
-    }
-    if (auto* pw = getpwuid(getuid())) {
-        return pw->pw_dir;
-    }
-    std::cerr << "Unable to find HOME directory\n";
-    return std::nullopt;
-}
-
 
 namespace fs = std::filesystem;
 
@@ -62,7 +51,7 @@ std::string findExecutableInPath(const std::string& executable_name) {
             current_path += c;
         }
     }
-    directories.push_back(current_path); // Add the last directory
+    directories.push_back(current_path);  // Add the last directory
 
     // Search each directory for the executable
     for (const std::string& dir : directories) {
@@ -70,7 +59,8 @@ std::string findExecutableInPath(const std::string& executable_name) {
 
         // Check if the file exists and is executable
         // The X_OK flag in access() checks for execute permission
-        if (fs::exists(full_path) && fs::is_regular_file(full_path) && access(full_path.c_str(), X_OK) == 0) {
+        if (fs::exists(full_path) && fs::is_regular_file(full_path) &&
+            access(full_path.c_str(), X_OK) == 0) {
             return full_path.string();
         }
     }
@@ -134,8 +124,7 @@ class EnvironmentCache {
     std::mutex mutex_;
 };
 
-std::vector<const char*>
-PlatformExecutionPolicy::convertEnvironment(const Command& cmd) {
+std::vector<const char*> PlatformExecutionPolicy::convertEnvironment(const Command& cmd) {
     // Set up environment variables
     std::unordered_map<std::string, std::string> env_map;
     env_map.insert(cmd.env.begin(), cmd.env.end());
@@ -146,20 +135,19 @@ PlatformExecutionPolicy::convertEnvironment(const Command& cmd) {
     }
     std::vector<const char*> envp;
     for (const auto& arg : env_map) {
-        envp.push_back((arg.first+ "=" + arg.second).c_str());
+        envp.push_back((arg.first + "=" + arg.second).c_str());
     }
     envp.push_back(nullptr);  // NULL-terminated
 
     return envp;
 }
 
-std::vector<const char*>
-PlatformExecutionPolicy::convertArgv(const Command& cmd) {
+std::vector<const char*> PlatformExecutionPolicy::convertArgv(const Command& cmd) {
     // Convert command args to C-style argv
     std::vector<const char*> argv;
     argv.push_back(cmd.executable.c_str());
     for (const auto& arg : cmd.args) {
-        argv.push_back(arg.c_str());
+        argv.push_back(arg.value.c_str());
     }
     argv.insert(argv.begin(), cmd.executable.filename().c_str());
     argv.push_back(nullptr);  // NULL-terminated
@@ -196,7 +184,6 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
             //  Open file and redirect stdin (TODO)
         }
         if (std::holds_alternative<FileTarget>(cmd.stdout_)) {
-
             const auto& file_target = std::get<FileTarget>(cmd.stdout_);
             std::cout << "Redirecting stdout to file: " << file_target.path.c_str() << std::endl;
             // TODO umask
@@ -237,7 +224,7 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
         std::vector<const char*> argv;
         argv.push_back(cmd.executable.c_str());
         for (const auto& arg : cmd.args) {
-            argv.push_back(arg.c_str());
+            argv.push_back(arg.value.c_str());
         }
         argv.push_back(nullptr);  // NULL-terminated
 
@@ -265,7 +252,7 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
         }
         std::cout << std::endl;
         */
-        //lookup executable in PATH if not an absolute or relative path
+        // lookup executable in PATH if not an absolute or relative path
         std::string found_path = findExecutableInPath(cmd.executable);
         auto rc = execve(found_path.c_str(), const_cast<char* const*>(argv.data()),
                          static_cast<char* const*>(envp.data()));

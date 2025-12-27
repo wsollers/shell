@@ -2,15 +2,17 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 #include "shell/config.hpp"
+
 #include "shell/input_source.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <iostream>
 #ifdef _WIN32
-#include <stdlib.h>
+    #include <stdlib.h>
 #else
-#include <pwd.h>
-#include <unistd.h>
+    #include <pwd.h>
+    #include <unistd.h>
 #endif
 
 namespace wshell {
@@ -40,11 +42,9 @@ bool DefaultValidationPolicy::is_valid_name(std::string_view name) {
     return true;
 }
 
-bool DefaultValidationPolicy::check_limits(std::size_t name_len,
-                                           std::size_t value_len,
+bool DefaultValidationPolicy::check_limits(std::size_t name_len, std::size_t value_len,
                                            std::size_t var_count) {
-    return name_len <= MAX_NAME_LENGTH && 
-           value_len <= MAX_VALUE_LENGTH &&
+    return name_len <= MAX_NAME_LENGTH && value_len <= MAX_VALUE_LENGTH &&
            var_count < MAX_VARIABLE_COUNT;
 }
 
@@ -53,15 +53,13 @@ bool StrictValidationPolicy::is_valid_name(std::string_view name) {
     return DefaultValidationPolicy::is_valid_name(name);
 }
 
-bool StrictValidationPolicy::check_limits(std::size_t name_len,
-                                          std::size_t value_len,
+bool StrictValidationPolicy::check_limits(std::size_t name_len, std::size_t value_len,
                                           std::size_t var_count) {
-    return name_len <= MAX_NAME_LENGTH && 
-           value_len <= MAX_VALUE_LENGTH &&
+    return name_len <= MAX_NAME_LENGTH && value_len <= MAX_VALUE_LENGTH &&
            var_count < MAX_VARIABLE_COUNT;
 }
 
-template<typename ValidationPolicy>
+template <typename ValidationPolicy>
 void Config<ValidationPolicy>::showEnvironmentVariables() {
     std::ranges::for_each(variables_, [](auto const& kv) {
         std::cout << std::format("{:<20} = {}\n", kv.first, kv.second);
@@ -72,10 +70,10 @@ void Config<ValidationPolicy>::showEnvironmentVariables() {
 // Static Helper Functions
 //==============================================================================
 
-template<typename ValidationPolicy>
+template <typename ValidationPolicy>
 std::filesystem::path Config<ValidationPolicy>::default_config_path() {
     std::filesystem::path home;
-    
+
 #ifdef _WIN32
     // Use Windows-safe _dupenv_s
     char* userprofile = nullptr;
@@ -114,4 +112,4 @@ std::filesystem::path Config<ValidationPolicy>::default_config_path() {
 template class Config<DefaultValidationPolicy>;
 template class Config<StrictValidationPolicy>;
 
-} // namespace shell
+}  // namespace wshell
