@@ -26,16 +26,6 @@ extern char** environ;
 
 namespace wshell {
 
-std::optional<std::filesystem::path> get_home_directory() {
-    if (const char* home = getenv("HOME")) {
-        return home;
-    }
-    if (auto* pw = getpwuid(getuid())) {
-        return pw->pw_dir;
-    }
-    std::cerr << "Unable to find HOME directory\n";
-    return std::nullopt;
-}
 
 namespace fs = std::filesystem;
 

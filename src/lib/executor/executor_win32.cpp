@@ -16,17 +16,6 @@
 namespace wshell {
 
 
-std::optional<std::filesystem::path> get_home_directory() {
-    char* home = nullptr;
-    size_t len = 0;
-    if (_dupenv_s(&home, &len, "USERPROFILE") == 0 && home != nullptr) {
-        std::filesystem::path result(home);
-        free(home);
-        return result;
-    }
-    std::cerr << "Unable to find HOME directory\n";
-    return std::nullopt;
-}
 
 void printWindowsErrMsg(DWORD& error) {
     error = GetLastError();
