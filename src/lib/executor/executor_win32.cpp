@@ -5,17 +5,24 @@
 
 #if defined(_WIN32)
 
+
+    #define _CRT_SECURE_NO_WARNINGS
     #include "shell/execution_policy.hpp"
 
     #include <sstream>
-
     #include <windows.h>
+    #include <iostream>
 
 namespace wshell {
 
+
 std::optional<std::filesystem::path> get_home_directory() {
-    if (const char* home = getenv("USERPROFILE")) {
-        return home;
+    char* home = nullptr;
+    size_t len = 0;
+    if (_dupenv_s(&home, &len, "USERPROFILE") == 0 && home != nullptr) {
+        std::filesystem::path result(home);
+        free(home);
+        return result;
     }
     std::cerr << "Unable to find HOME directory\n";
     return std::nullopt;
