@@ -1,22 +1,21 @@
-#include <iostream>
-#include <unistd.h>
-#include <cstdlib>
 
+#include <iostream>
 #include "shell/built_ins.hpp"
+#include "shell/platform.h"
 
 
 namespace wshell {
 
 int CdBuiltin::invoke(const std::vector<std::string>& args, ShellProcessContext& ctx) {
-    const char* dir = nullptr;
+    std::string dir;
     if (args.size() < 2) {
-        dir = std::getenv("HOME");
-        if (!dir) dir = ".";
+        auto home = wshell::get_home_directory();
+        dir = home.value_or(".");
     } else {
-        dir = args[1].c_str();
+        dir = args[1];
     }
-    if (chdir(dir) != 0) {
-        std::perror("cd");
+    if (!wshell::set_current_directory(dir)) {
+        std::cerr << "cd: failed to change directory to '" << dir << "'\n";
         return 1;
     }
     return 0;
