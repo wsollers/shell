@@ -36,7 +36,7 @@ ExecutionResult PlatformExecutionPolicy::execute(const Command& cmd) const {
     std::ostringstream cmdline;
     cmdline << cmd.executable.string();
     for (const auto& arg : cmd.args) {
-        cmdline << " " << std::string(arg);
+        cmdline << " " << arg.str();
     }
     std::string cmdline_str = cmdline.str();
 
