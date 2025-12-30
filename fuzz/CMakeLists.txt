@@ -60,8 +60,17 @@ if(ENABLE_FUZZING)
 
 
   # Fuzz: parser
-  add_executable(fuzz_parse fuzz_parse.cpp)
-  target_compile_options(fuzz_parse PRIVATE ${WSHELL_FUZZ_COMPILE_OPTS})
-  target_link_options(fuzz_parse PRIVATE ${WSHELL_FUZZ_LINK_OPTS})
+
+  add_executable(fuzz_parse_line fuzz_parse_line.cpp)
+  target_include_directories(fuzz_parse_line PRIVATE ${CMAKE_SOURCE_DIR}/include)
+  target_compile_options(fuzz_parse_line PRIVATE ${WSHELL_FUZZ_COMPILE_OPTS})
+  target_link_options(fuzz_parse_line PRIVATE ${WSHELL_FUZZ_LINK_OPTS})
+  target_link_libraries(fuzz_parse_line PRIVATE wshell_lib)
+
+  add_executable(fuzz_parse_program fuzz_parse_program.cpp)
+  target_include_directories(fuzz_parse_program PRIVATE ${CMAKE_SOURCE_DIR}/include)
+  target_compile_options(fuzz_parse_program PRIVATE ${WSHELL_FUZZ_COMPILE_OPTS})
+  target_link_options(fuzz_parse_program PRIVATE ${WSHELL_FUZZ_LINK_OPTS})
+  target_link_libraries(fuzz_parse_program PRIVATE wshell_lib)
 
 endif()
