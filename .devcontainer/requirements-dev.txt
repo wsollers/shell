@@ -13,6 +13,7 @@ mypy
 Sphinx
 sphinx-rtd-theme
 
-# Build and packaging - only install if not conflicting with system
-setuptools
-twine
+# Build and packaging
+setuptools==78.1.1
+wheel==0.44.0
+twine==5.1.1
