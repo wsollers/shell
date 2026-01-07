@@ -77,21 +77,35 @@
 
     {
       "name": "macos-release",
-      "displayName": "macOS Release (Clang + libc++)",
-      "inherits": "unix-clang-libcxx",
+      "displayName": "macOS Release (Clang 18 + libc++)",
+      "inherits": "base",
+      "generator": "Unix Makefiles",
       "binaryDir": "${sourceDir}/build/macos-release",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+      "cacheVariables": { 
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang-18",
+        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-libcxx.cmake",
+        "WSHELL_FORCE_LIBCXX": "ON"
+      }
     },
     {
       "name": "macos-debug",
-      "displayName": "macOS Debug (Clang + libc++)",
-      "inherits": "unix-clang-libcxx",
+      "displayName": "macOS Debug (Clang 18 + libc++)",
+      "inherits": "base",
+      "generator": "Unix Makefiles",
       "binaryDir": "${sourceDir}/build/macos-debug",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+      "cacheVariables": { 
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang-18",
+        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-libcxx.cmake",
+        "WSHELL_FORCE_LIBCXX": "ON"
+      }
     },
     {
       "name": "macos-bench",
-      "displayName": "macOS Benchmarks (Clang + libc++)",
+      "displayName": "macOS Benchmarks (Clang 18 + libc++)",
       "inherits": "macos-release",
       "binaryDir": "${sourceDir}/build/macos-bench",
       "cacheVariables": { "ENABLE_BENCHMARKS": "ON" }

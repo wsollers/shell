@@ -46,6 +46,7 @@ This installs:
 | `configure` | Configure CMake build system | Linux/macOS/Windows |
 | `build` | Compile the project | Linux/macOS/Windows |
 | `test` | Run unit tests | Linux/macOS/Windows |
+| `run-shell` | Build and launch shell for manual testing | Linux/macOS/Windows |
 | `benchmark` | Run performance benchmarks | Linux/macOS/Windows |
 | `coverage` | Generate code coverage reports | Linux/macOS |
 | `fuzz` | Run fuzz testing | Linux/macOS/Windows |
@@ -166,6 +167,40 @@ Examples:
   .\scripts\test.ps1 -Config Debug      # Test debug build
   .\scripts\test.ps1 -List              # List available tests
 ```
+
+### 🚀 Run Shell Scripts
+
+Build and launch the shell for interactive manual testing.
+
+**Linux/macOS:**
+```bash
+./scripts/run-shell.sh [ARGUMENTS...]
+
+Examples:
+  ./scripts/run-shell.sh                    # Build and run shell interactively
+  ./scripts/run-shell.sh --help             # Pass --help to shell
+  ./scripts/run-shell.sh -c "echo test"     # Run shell with command
+```
+- Automatically builds the project with `linux-release` preset
+- Launches `build/linux-release/wshell` executable
+- Passes all command-line arguments through to the shell
+
+**Windows:**
+```powershell
+.\scripts\run-shell.ps1 [OPTIONS] [ARGUMENTS...]
+
+Parameters:
+  -Config CFG       Build configuration: Debug|Release (default: "Release")
+
+Examples:
+  .\scripts\run-shell.ps1                      # Build and run release shell
+  .\scripts\run-shell.ps1 -Config Debug        # Build and run debug shell
+  .\scripts\run-shell.ps1 --help               # Pass --help to shell
+  .\scripts\run-shell.ps1 -c "echo test"       # Run shell with command
+```
+- Automatically builds the project with `windows-msvc-{config}` preset
+- Launches `build/windows-msvc-{config}/wshell.exe` executable
+- Passes all extra arguments through to the shell
 
 ### 📊 Benchmark Scripts
 

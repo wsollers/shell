@@ -12,64 +12,75 @@ FROM ubuntu:${UBUNTU_VERSION}
 # Install system dependencies in order of change frequency
 # Base system packages (rarely change)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Essential tools
-    ca-certificates=20240203 \
-    curl=8.5.0-2ubuntu10.5 \
-    wget=1.21.4-1ubuntu4.1 \
-    gnupg=2.4.4-2ubuntu17 \
-    lsb-release=12.0-2 \
-    software-properties-common=0.99.48 \
-    # Development tools
-    git=1:2.43.0-1ubuntu7.1 \
-    vim=2:9.1.0016-1ubuntu7.3 \
-    nano=7.2-1build1 \
-    tree=2.1.1-2ubuntu3 \
-    htop=3.3.0-2build1 \
-    # Build essentials
-    build-essential=12.10ubuntu1 \
-    make=4.3-4.1build2 \
-    pkg-config=1.8.1-2build1 \
+    # Essential tools (use latest stable versions)
+    ca-certificates \
+    curl \
+    wget \
+    gnupg \
+    lsb-release \
+    software-properties-common \
+    # Development tools (use latest stable versions)
+    git \
+    vim \
+    nano \
+    tree \
+    htop \
+    # Build essentials (use latest stable versions)
+    build-essential \
+    make \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Install language runtimes and compilers (occasionally change)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Clang with C++23 support
-    clang-${CLANG_VERSION}=1:18.1.3-1ubuntu1 \
-    clang++-${CLANG_VERSION}=1:18.1.3-1ubuntu1 \
-    # libc++ for C++23 features like std::expected
-    libc++-${CLANG_VERSION}-dev=1:18.1.3-1ubuntu1 \
-    libc++abi-${CLANG_VERSION}-dev=1:18.1.3-1ubuntu1 \
-    # Development tools
-    gdb=15.0.50.20240403-0ubuntu1 \
-    valgrind=1:3.22.0-0ubuntu2 \
-    strace=6.8-0ubuntu2 \
-    # Python for SBOM tools
-    python${PYTHON_VERSION}=3.12.3-1ubuntu0.4 \
-    python${PYTHON_VERSION}-dev=3.12.3-1ubuntu0.4 \
-    python3-pip=24.0+dfsg-1ubuntu1.1 \
-    python3-venv=3.12.3-1ubuntu0.4 \
+    # Clang with C++23 support + fuzzing/sanitizer runtimes
+    clang-18 \
+    clang++-18 \
+    clang-tools-18 \
+    # libc++ for C++23 features like std::expected  
+    libc++-18-dev \
+    libc++abi-18-dev \
+    # Clang runtime libraries for fuzzing and sanitizers
+    libclang-rt-18-dev \
+    # Development tools (use latest stable versions)
+    gdb \
+    valgrind \
+    strace \
+    # Python for REUSE compliance
+    python3.12 \
+    python3.12-dev \
+    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
 # Install CMake from Kitware's repository for latest version
 RUN wget -qO- https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/kitware.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends cmake=3.30.5-0kitware1ubuntu$(lsb_release -rs)1 \
+    && apt-get install -y --no-install-recommends cmake \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up compiler alternatives
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${CLANG_VERSION} 100 \
-    && update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${CLANG_VERSION} 100
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100 \
+    && update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
 
-# Install Python SBOM dependencies with pinned versions
+# Create Python virtual environment and install packages
 COPY requirements-dev.txt /tmp/
-RUN python3 -m pip install --no-cache-dir --upgrade pip==24.2 \
-    && python3 -m pip install --no-cache-dir -r /tmp/requirements-dev.txt \
+RUN python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements-dev.txt \
     && rm /tmp/requirements-dev.txt
 
+# Install Syft for SBOM generation
+RUN curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+# Add virtual environment to PATH
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Create non-root user for development
-RUN groupadd --gid 1000 vscode \
-    && useradd --uid 1000 --gid vscode --shell /bin/bash --create-home vscode \
+# Use UID/GID 1001 to avoid conflict with Ubuntu's default ubuntu user (1000)
+RUN groupadd --gid 1001 vscode \
+    && useradd --uid 1001 --gid 1001 --shell /bin/bash --create-home vscode \
+    && mkdir -p /etc/sudoers.d \
     && echo 'vscode ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/vscode \
     && chmod 0440 /etc/sudoers.d/vscode
 
@@ -81,10 +92,9 @@ USER vscode
 WORKDIR /workspace
 
 # Set environment variables for C++23 development
-ENV CC=clang-${CLANG_VERSION}
-ENV CXX=clang++-${CLANG_VERSION}
+ENV CC=clang-18
+ENV CXX=clang++-18
 ENV CMAKE_GENERATOR="Unix Makefiles"
-ENV PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
 
 # Add helpful aliases
 RUN echo 'alias ll="ls -alF"' >> ~/.bashrc \
@@ -100,4 +110,5 @@ RUN echo "=== Development Environment Versions ===" \
     && echo "Clang: $(clang++ --version | head -1)" \
     && echo "CMake: $(cmake --version | head -1)" \
     && echo "Python: $(python3 --version)" \
-    && echo "Git: $(git --version)"
+    && echo "Git: $(git --version)" \
+    && echo "Syft: $(syft version | head -1)"

@@ -151,11 +151,21 @@ jobs:
         cmake --preset windows-msvc-release -DENABLE_TESTING=OFF -DENABLE_FUZZING=OFF -DENABLE_BENCHMARKS=OFF
 
     - name: Debug Build Configuration
+      shell: pwsh
       run: |
-        echo "Build directory contents:"
-        ls -la build/windows-msvc-release/ || dir build\windows-msvc-release
-        echo "CMake cache contents:"
-        type build\windows-msvc-release\CMakeCache.txt | findstr "CMAKE_BUILD_TYPE\|ENABLE_" || echo "Cache not found"
+        Write-Host "Build directory contents:"
+        if (Test-Path build\windows-msvc-release) {
+          Get-ChildItem build\windows-msvc-release
+        } else {
+          Write-Host "Build directory not found"
+        }
+        Write-Host "CMake cache contents:"
+        if (Test-Path build\windows-msvc-release\CMakeCache.txt) {
+          Select-String -Path build\windows-msvc-release\CMakeCache.txt `
+            -Pattern "CMAKE_BUILD_TYPE|ENABLE_"
+        } else {
+          Write-Host "Cache not found"
+        }
 
     - name: Build Project First
       run: |

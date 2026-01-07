@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(wshell
-    VERSION 0.1.0
+    VERSION 0.2.1
     DESCRIPTION "A secure command shell interpreter"
     LANGUAGES CXX
 )
@@ -200,25 +200,7 @@ if(ENABLE_COVERAGE AND NOT MSVC)
     endif()
 endif()
 
-# ============================
-# New ChatGPT files library
-# ============================
-add_library(shell_core
-  src/main/parser/lexer.cpp
-  src/main/parser/parser.cpp
-  src/main/parser/config.cpp
-  src/main/exec/exec_common.cpp
-  src/main/exec/exec_linux.cpp
-  src/main/exec/exec_macos.cpp
-  src/main/exec/exec_win32.cpp
-)
-target_include_directories(shell_core PUBLIC include)
 
-# Apply security/hardening flags to the new library
-target_compile_options(shell_core PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/W4>
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
-)
 
 # ============================
 # Dependencies
@@ -240,11 +222,7 @@ if(ENABLE_TESTING)
         FetchContent_MakeAvailable(googletest)
     endif()
     
-    # Add new ChatGPT test files
-    add_executable(shell_tests test/test_parser.cpp)
-    target_link_libraries(shell_tests PRIVATE shell_core gtest_main)
-    include(GoogleTest)
-    gtest_discover_tests(shell_tests)
+
 endif()
 
 if(ENABLE_BENCHMARKS)
@@ -284,8 +262,11 @@ if(ENABLE_BENCHMARKS)
     endif()
     
     # Add new ChatGPT benchmark files
-    add_executable(shell_bench bench/bench_parser.cpp)
-    target_link_libraries(shell_bench PRIVATE shell_core benchmark::benchmark)
+    add_executable(shell_bench bench/bench_parser.cpp
+            include/shell/ast_printer.hpp
+            src/lib/ast/ast_printer.cpp
+            include/shell/shell_process_context.h)
+    target_link_libraries(shell_bench PRIVATE wshell_lib benchmark::benchmark)
 endif()
 
 # ============================
@@ -308,25 +289,12 @@ set(WSHELL_FUZZ_ENABLED OFF CACHE INTERNAL "Whether fuzz targets are enabled")
 if(ENABLE_FUZZING)
     message(STATUS "Fuzzing: requested (ENABLE_FUZZING=ON) - configuring fuzz targets...")
     add_subdirectory(fuzz)
-    # Also add new ChatGPT fuzz files directly
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_executable(fuzz_parse fuzz/fuzz_parse.cpp)
-        target_link_libraries(fuzz_parse PRIVATE shell_core)
-        target_compile_options(fuzz_parse PRIVATE
-            -fsanitize=fuzzer,address,undefined
-            -fno-omit-frame-pointer
-        )
-        target_link_options(fuzz_parse PRIVATE
-            -fsanitize=fuzzer,address,undefined
-        )
-        set(WSHELL_FUZZ_ENABLED ON CACHE INTERNAL "Whether fuzz targets are enabled")
-    endif()
 endif()
 
 # ============================
 # Installation
 # ============================
-install(TARGETS wshell wshell_lib shell_core
+install(TARGETS wshell wshell_lib
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -376,8 +344,6 @@ if(ENABLE_SBOM)
     # Add targets to SBOM
     sbom_add(TARGET wshell)
     sbom_add(TARGET wshell_lib)
-    sbom_add(TARGET shell_core)
-    
     # Finalize SBOM (generates tag-value format, disable verification to avoid issues)
     sbom_finalize(NO_VERIFY)
     

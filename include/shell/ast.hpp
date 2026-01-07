@@ -1,64 +1,137 @@
+// Copyright (c) 2024
+// SPDX-License-Identifier: BSD-2-Clause
+
 #pragma once
-#include <cstdint>
-#include <string>
+
+#include <string_view>
 #include <variant>
+
+#include <string>
 #include <vector>
+#include <ostream>
 
-namespace shell {
+namespace wshell {
 
-enum class RedirKind : std::uint8_t {
-  IN,         // <
-  OUT_TRUNC,  // >
-  OUT_APPEND, // >>
-  HEREDOC     // <<
+// ============================================================================
+// Word struct for shell words (quoted, needs expansion, etc.)
+// ============================================================================
+
+struct Word {
+    std::string text;
+    bool quoted = false;
+    bool needs_expansion = false;
+    Word(std::string t, bool q = false, bool n = false)
+        : text(std::move(t)), quoted(q), needs_expansion(n) {}
+    Word() = default;
 };
 
-struct Redir {
-  RedirKind kind{};
-  std::string target; // already unquoted/unescaped in v0
+// Stream output for Word (for AST printing)
+inline std::ostream& operator<<(std::ostream& os, const Word& w) {
+    if (w.quoted) {
+        os.put('"');
+        os << w.text;
+        os.put('"');
+    } else {
+        os << w.text;
+    }
+    return os;
+}
+
+enum class RedirectKind {
+    Input,           // <
+    OutputTruncate,  // >
+    OutputAppend     // >>
 };
 
-struct Command {
-  std::vector<std::string> argv; // argv[0] required
-  std::vector<Redir> redirs;
+struct Redirection {
+    RedirectKind kind;
+    Word target;
+
+    Redirection(RedirectKind k, Word t) : kind(k), target(std::move(t)) {}
 };
 
-struct Pipeline {
-  std::vector<Command> cmds; // >= 2 for pipeline; allow 1 if you want
+// ============================================================================
+// Forward declarations for variant
+// ============================================================================
+
+struct CommentNode;
+struct AssignmentNode;
+struct CommandNode;
+struct PipelineNode;
+struct SequenceNode;
+
+// ============================================================================
+// AST Node Types (NO inheritance, NO base class)
+// ============================================================================
+
+struct CommentNode {
+    std::string text;
 };
 
-enum class LogicalOp : std::uint8_t { AND_IF, OR_IF };
-
-struct Logical {
-  LogicalOp op{};
-  std::size_t lhs{};
-  std::size_t rhs{};
+struct AssignmentNode {
+    std::string variable;
+    std::string value;
 };
 
-struct Node {
-  std::variant<Command, Pipeline, Logical> v;
+struct CommandNode {
+    Word command_name;
+    std::vector<Word> arguments;
+    std::vector<Redirection> redirections;
+    bool background = false;
 };
 
-struct ListItem {
-  std::size_t node{};
-  bool background{};
+struct PipelineNode {
+    std::vector<CommandNode> commands;  // by value
 };
 
-struct Sequence {
-  std::vector<ListItem> items;
+struct SequenceNode {
+    std::vector<std::variant<CommentNode, AssignmentNode, CommandNode, PipelineNode, SequenceNode>>
+        statements;
 };
 
-struct Arena {
-  std::vector<Node> nodes;
+// ============================================================================
+// Statement Variant (NO pointers)
+// ============================================================================
 
-  template<class T>
-  std::size_t add(T&& t) {
-    nodes.push_back(Node{std::variant<Command, Pipeline, Logical>(std::forward<T>(t))});
-    return nodes.size() - 1;
-  }
+using StatementNode =
+    std::variant<CommentNode, AssignmentNode, CommandNode, PipelineNode, SequenceNode>;
 
-  Node&       at(std::size_t i)       { return nodes.at(i); }
-  Node const& at(std::size_t i) const { return nodes.at(i); }
+// ============================================================================
+// Program Node
+// ============================================================================
+
+struct ProgramNode {
+    std::vector<StatementNode> statements;
+
+    void add_statement(StatementNode stmt) { statements.push_back(std::move(stmt)); }
+
+    [[nodiscard]] bool empty() const noexcept { return statements.empty(); }
+    [[nodiscard]] std::size_t size() const noexcept { return statements.size(); }
 };
 
-} // namespace shell
+// ============================================================================
+// Factory Helpers (now return value types)
+// ============================================================================
+
+inline CommentNode make_comment(std::string text) {
+    return CommentNode{std::move(text)};
+}
+
+inline AssignmentNode make_assignment(std::string var, std::string value) {
+    return AssignmentNode{std::move(var), std::move(value)};
+}
+
+inline CommandNode make_command(Word name, std::vector<Word> args = {},
+                                std::vector<Redirection> redirs = {}, bool background = false) {
+    return CommandNode{std::move(name), std::move(args), std::move(redirs), background};
+}
+
+inline PipelineNode make_pipeline(std::vector<CommandNode> cmds) {
+    return PipelineNode{std::move(cmds)};
+}
+
+inline SequenceNode make_sequence(std::vector<StatementNode> stmts) {
+    return SequenceNode{std::move(stmts)};
+}
+
+}  // namespace wshell

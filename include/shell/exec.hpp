@@ -1,43 +1,38 @@
+// Copyright (c) 2024 William Sollers
+// SPDX-License-Identifier: BSD-2-Clause
+
 #pragma once
-#include "shell/ast.hpp"
 #include <optional>
 #include <string>
+#include <vector>
 
-namespace shell {
+namespace wshell {
 
 struct ExecError {
   std::string msg;
 };
 
+// Simplified exec interface without AST dependencies
 class Exec {
 public:
   Exec();
   ~Exec();
 
-  // Call once in interactive mode to set up job control (no-op if non-interactive).
+  // Call once in interactive mode to set up job control
   void init_job_control();
 
-  // Execute a whole Sequence (list of items)
-  std::optional<ExecError> run(Sequence const& seq, Arena const& a);
-
-  // Common AST wiring accessible to implementations:
-  std::optional<ExecError> run_node_fg(std::size_t node, Arena const& a, int& exit_status);
+  // Execute a simple command (argv[0] is the program)
+  std::optional<ExecError> run_command(std::vector<std::string> const& argv);
 
   // Implementation interface for platform-specific code
   struct Impl {
     virtual ~Impl() = default;
     virtual void init_job_control() = 0;
-    virtual std::optional<ExecError> launch_command(Command const& cmd, bool bg, int& exit_status) = 0;
-    virtual std::optional<ExecError> launch_pipeline(Pipeline const& p, bool bg, int& exit_status) = 0;
-    virtual std::optional<ExecError> launch_logical_controller(Logical const& l, bool bg, Arena const& a) = 0;
+    virtual std::optional<ExecError> run_command(std::vector<std::string> const& argv) = 0;
   };
 
 private:
   Impl* impl_{nullptr};
-
-  // Internal AST wiring:
-  std::optional<ExecError> run_item(ListItem const& item, Arena const& a);
-  std::optional<ExecError> run_node_bg(std::size_t node, Arena const& a);
 };
 
 } // namespace shell

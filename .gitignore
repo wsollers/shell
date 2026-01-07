@@ -51,3 +51,4 @@ third_party/
 *.idx
 debug_parser_stub
 .venv/
+oom-*
